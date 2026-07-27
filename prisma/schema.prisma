@@ -1,0 +1,103 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  name            String
+  passwordHash    String
+  isEmailVerified Boolean           @default(false)
+
+  bookings        Booking[]
+  recurringSeries RecurringSeries[]
+  notifications   Notification[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("users")
+}
+
+model Room {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  floor     Int
+  capacity  Int
+
+  bookings  Booking[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([capacity])
+  @@map("rooms")
+}
+
+model RecurringSeries {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  untilDate  DateTime
+
+  bookings   Booking[]
+
+  createdAt  DateTime  @default(now())
+
+  @@map("recurring_series")
+}
+
+model Booking {
+  id                String           @id @default(uuid())
+  roomId            String
+  room              Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  recurringSeriesId String?
+  recurringSeries   RecurringSeries? @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
+
+  startTime         DateTime
+  endTime           DateTime
+
+  notifications     Notification[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([roomId, startTime, endTime])
+  @@index([userId])
+  @@map("bookings")
+}
+
+enum NotificationType {
+  SLOT_ENDING_SOON
+  BOOKING_CANCELLED
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookingId String?
+  booking   Booking?         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  type      NotificationType @default(SLOT_ENDING_SOON)
+  message   String
+  isRead    Boolean          @default(false)
+
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
