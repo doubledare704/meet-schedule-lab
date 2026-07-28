@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hasIntervalOverlap, validateBookingRules } from './overlap';
-import { fixedNow, createDate, createInterval } from './test-utils';
+import { fixedNow, createDate, createInterval, addDays } from './test-utils';
 
 describe('hasIntervalOverlap', () => {
   it('detects direct overlapping intervals', () => {
@@ -82,33 +82,33 @@ describe('validateBookingRules', () => {
     expect(result.isValid).toBe(false);
   });
 
-  it('passes when start is exactly 09:00', () => {
+  it('passes when start is exactly 09:00 Kyiv (06:00 UTC)', () => {
     const result = validateBookingRules(
-      { startTime: createDate(9, 0), endTime: createDate(10, 0) },
+      { startTime: addDays(createDate(6, 0), 1), endTime: addDays(createDate(7, 0), 1) },
       fixedNow,
     );
     expect(result.isValid).toBe(true);
   });
 
-  it('rejects start before 09:00', () => {
+  it('rejects start before 09:00 Kyiv (before 06:00 UTC)', () => {
     const result = validateBookingRules(
-      { startTime: createDate(8, 0), endTime: createDate(9, 0) },
+      { startTime: addDays(createDate(5, 0), 1), endTime: addDays(createDate(6, 0), 1) },
       fixedNow,
     );
     expect(result.isValid).toBe(false);
   });
 
-  it('passes when end is exactly 19:00', () => {
+  it('passes when end is exactly 19:00 Kyiv (16:00 UTC)', () => {
     const result = validateBookingRules(
-      { startTime: createDate(18, 0), endTime: createDate(19, 0) },
+      { startTime: addDays(createDate(15, 0), 1), endTime: addDays(createDate(16, 0), 1) },
       fixedNow,
     );
     expect(result.isValid).toBe(true);
   });
 
-  it('rejects end after 19:00', () => {
+  it('rejects end after 19:00 Kyiv (after 16:00 UTC)', () => {
     const result = validateBookingRules(
-      { startTime: createDate(18, 30), endTime: createDate(19, 30) },
+      { startTime: addDays(createDate(15, 30), 1), endTime: addDays(createDate(16, 30), 1) },
       fixedNow,
     );
     expect(result.isValid).toBe(false);

@@ -1,4 +1,5 @@
 import type { TimeInterval, BookingRuleInput, ValidationResult } from './types';
+import { getWallClockTime } from './timezone';
 
 export function hasIntervalOverlap(a: TimeInterval, b: TimeInterval): boolean {
   return Math.max(a.start.getTime(), b.start.getTime()) < Math.min(a.end.getTime(), b.end.getTime());
@@ -7,6 +8,7 @@ export function hasIntervalOverlap(a: TimeInterval, b: TimeInterval): boolean {
 export function validateBookingRules(
   input: BookingRuleInput,
   now?: Date,
+  timezone?: string,
 ): ValidationResult {
   const nowDate = now ?? new Date();
   const startMs = input.startTime.getTime();
@@ -20,10 +22,11 @@ export function validateBookingRules(
     return { isValid: false, error: 'Cannot book in the past' };
   }
 
-  const startMinOfDay =
-    input.startTime.getUTCHours() * 60 + input.startTime.getUTCMinutes();
-  const endMinOfDay =
-    input.endTime.getUTCHours() * 60 + input.endTime.getUTCMinutes();
+  const startWall = getWallClockTime(input.startTime, timezone);
+  const endWall = getWallClockTime(input.endTime, timezone);
+
+  const startMinOfDay = startWall.hours * 60 + startWall.minutes;
+  const endMinOfDay = endWall.hours * 60 + endWall.minutes;
 
   if (startMinOfDay % 30 !== 0 || endMinOfDay % 30 !== 0) {
     return { isValid: false, error: 'Times must align to 30-minute increments' };
