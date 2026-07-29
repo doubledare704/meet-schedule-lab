@@ -21,8 +21,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const roomId = searchParams.get('roomId');
     const date = searchParams.get('date');
+    const mine = searchParams.get('mine');
 
     const where: Record<string, unknown> = {};
+
+    if (mine === 'true') {
+      where.userId = user.id;
+    }
 
     if (roomId) {
       where.roomId = roomId;
