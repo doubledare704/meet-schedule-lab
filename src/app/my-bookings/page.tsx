@@ -132,6 +132,54 @@ export default function MyBookingsPage() {
   );
 }
 
+function BookingCard({ booking, onCancel, readonly }: {
+  booking: BookingData;
+  onCancel: (b: BookingData) => void;
+  readonly?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium text-zinc-800">{booking.room.name}</span>
+          {booking.recurringSeriesId ? (
+            <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+              Recurring
+            </span>
+          ) : (
+            <span className="shrink-0 text-[11px] text-zinc-400">One-off</span>
+          )}
+        </div>
+        <div className="mt-0.5 text-xs text-zinc-500">
+          {new Date(booking.startTime).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          })}{' '}
+          {new Date(booking.startTime).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+          {' - '}
+          {new Date(booking.endTime).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </div>
+      </div>
+      {!readonly && (
+        <button
+          type="button"
+          onClick={() => onCancel(booking)}
+          className="ml-3 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+        >
+          Cancel
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Table({
   bookings,
   onCancel,
@@ -146,66 +194,73 @@ function Table({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500">
-            <th className="px-4 py-3">Room</th>
-            <th className="px-4 py-3">Date</th>
-            <th className="px-4 py-3">Time</th>
-            <th className="px-4 py-3">Type</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map((b) => (
-            <tr key={b.id} className="border-b border-zinc-100 last:border-0">
-              <td className="px-4 py-3 font-medium text-zinc-800">{b.room.name}</td>
-              <td className="px-4 py-3 text-zinc-600">
-                {new Date(b.startTime).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </td>
-              <td className="px-4 py-3 text-zinc-600">
-                {new Date(b.startTime).toLocaleTimeString('en-GB', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                -{' '}
-                {new Date(b.endTime).toLocaleTimeString('en-GB', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </td>
-              <td className="px-4 py-3">
-                {b.recurringSeriesId ? (
-                  <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
-                    Recurring
-                  </span>
-                ) : (
-                  <span className="text-zinc-400">One-off</span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right">
-                {!readonly && (
-                  <button
-                    type="button"
-                    onClick={() => onCancel(b)}
-                    className={clsx(
-                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      'text-red-600 hover:bg-red-50',
-                    )}
-                  >
-                    Cancel
-                  </button>
-                )}
-              </td>
+    <>
+      <div className="space-y-2 md:hidden">
+        {bookings.map((b) => (
+          <BookingCard key={b.id} booking={b} onCancel={onCancel} readonly={readonly} />
+        ))}
+      </div>
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500">
+              <th className="px-4 py-3">Room</th>
+              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Time</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {bookings.map((b) => (
+              <tr key={b.id} className="border-b border-zinc-100 last:border-0">
+                <td className="px-4 py-3 font-medium text-zinc-800">{b.room.name}</td>
+                <td className="px-4 py-3 text-zinc-600">
+                  {new Date(b.startTime).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </td>
+                <td className="px-4 py-3 text-zinc-600">
+                  {new Date(b.startTime).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  -{' '}
+                  {new Date(b.endTime).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </td>
+                <td className="px-4 py-3">
+                  {b.recurringSeriesId ? (
+                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                      Recurring
+                    </span>
+                  ) : (
+                    <span className="text-zinc-400">One-off</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {!readonly && (
+                    <button
+                      type="button"
+                      onClick={() => onCancel(b)}
+                      className={clsx(
+                        'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                        'text-red-600 hover:bg-red-50',
+                      )}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

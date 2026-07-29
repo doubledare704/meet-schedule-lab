@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { getWallClockTime, getKyivDateParts, getKyivDayStart } from '@/utils/timezone';
 import { BookingBlock } from './BookingBlock';
 import { BookingPopover } from './BookingPopover';
+import { GridDay } from './GridDay';
 import { ROOM_COLORS } from './RoomFilterBar';
 
 const TZ = 'Europe/Kyiv';
@@ -93,6 +94,7 @@ export function ScheduleGrid({
   const days = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
   const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
+  const [mobileDayIdx, setMobileDayIdx] = useState<number>(-1);
 
   useEffect(() => {
     function updateTime() {
@@ -109,6 +111,11 @@ export function ScheduleGrid({
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const todayIdx = days.findIndex(isToday);
+    setMobileDayIdx(todayIdx >= 0 ? todayIdx : 0);
+  }, [days]);
 
   const todayIdx = days.findIndex(isToday);
   const isAllRooms = selectedRoomId === null;
@@ -163,7 +170,48 @@ export function ScheduleGrid({
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="lg:hidden">
+        <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
+          {days.map((day, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setMobileDayIdx(i)}
+              className={clsx(
+                'shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+                i === mobileDayIdx
+                  ? 'bg-zinc-900 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200',
+                isToday(day) && i !== mobileDayIdx && 'ring-1 ring-inset ring-zinc-300',
+              )}
+            >
+              <div>{WEEKDAY_LABELS[day.weekday]}</div>
+              <div className="mt-0.5 opacity-70">{day.day}</div>
+            </button>
+          ))}
+        </div>
+
+        {mobileDayIdx >= 0 && (
+          <div className="relative">
+            {days.map((day, i) => (
+              <div key={i} className={clsx(i !== mobileDayIdx && 'hidden')}>
+                <GridDay
+                  day={day}
+                  bookings={bookingsByDay.get(formatDateKey(day)) ?? []}
+                  currentUserId={currentUserId}
+                  isAllRooms={isAllRooms}
+                  isToday={isToday(day)}
+                  currentTimePos={currentTimePos}
+                  onSlotClick={handleSlotClick}
+                  onBookingClick={handleBookingClick}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden lg:block overflow-x-auto">
         <div
           className="grid min-w-[900px]"
           style={{

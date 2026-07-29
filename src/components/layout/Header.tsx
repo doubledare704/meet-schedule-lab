@@ -43,36 +43,39 @@ export function Header({ userName }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-        <div className="flex items-center gap-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
+        <div className="flex items-center gap-3 sm:gap-6">
           <Link
             href="/schedule"
-            className="text-lg font-semibold text-zinc-900 hover:text-zinc-700 transition-colors"
+            className="text-base font-semibold text-zinc-900 hover:text-zinc-700 transition-colors sm:text-lg"
           >
-            Meet Schedule Lab
+            <span className="hidden sm:inline">Meet Schedule Lab</span>
+            <span className="sm:hidden">MSL</span>
           </Link>
           <nav className="flex items-center gap-1">
             <Link
               href="/schedule"
               className={clsx(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3',
                 pathname === '/schedule'
                   ? 'bg-zinc-100 text-zinc-900'
                   : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
               )}
             >
-              Schedule
+              <span className="hidden sm:inline">Schedule</span>
+              <span className="sm:hidden">Sched</span>
             </Link>
             <Link
               href="/my-bookings"
               className={clsx(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3',
                 pathname === '/my-bookings'
                   ? 'bg-zinc-100 text-zinc-900'
                   : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
               )}
             >
-              My Bookings
+              <span className="hidden sm:inline">My Bookings</span>
+              <span className="sm:hidden">Mine</span>
             </Link>
           </nav>
         </div>

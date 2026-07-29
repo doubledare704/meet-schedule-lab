@@ -50,7 +50,7 @@ export function RoomFilterBar({
           type="button"
           onClick={() => onRoomChange(null)}
           className={clsx(
-            'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+            'rounded-full border px-3 py-1 text-sm font-medium transition-colors sm:px-4 sm:py-1.5',
             selectedRoomId === null
               ? 'border-zinc-900 bg-zinc-900 text-white'
               : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800',
@@ -64,7 +64,7 @@ export function RoomFilterBar({
             type="button"
             onClick={() => onRoomChange(room.id)}
             className={clsx(
-              'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+              'rounded-full border px-3 py-1 text-sm font-medium transition-colors sm:px-4 sm:py-1.5',
               selectedRoomId === room.id
                 ? 'border-zinc-900 bg-zinc-900 text-white'
                 : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800',

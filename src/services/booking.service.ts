@@ -23,6 +23,11 @@ export async function createBooking(input: {
 
   try {
     const result = await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        `SELECT pg_advisory_xact_lock(('x' || left(md5($1::text), 15))::bit(60)::bigint)`,
+        input.roomId,
+      );
+
       await tx.$queryRawUnsafe(
         `SELECT id FROM "bookings" WHERE "roomId" = $1 AND "startTime" < $2 AND "endTime" > $3 FOR UPDATE`,
         input.roomId,
@@ -219,6 +224,11 @@ export async function createRecurringSeries(input: {
 
   try {
     const result = await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        `SELECT pg_advisory_xact_lock(('x' || left(md5($1::text), 15))::bit(60)::bigint)`,
+        input.roomId,
+      );
+
       const series = await tx.recurringSeries.create({
         data: {
           userId: input.userId,
