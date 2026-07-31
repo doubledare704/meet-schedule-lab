@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { getWallClockTime, getKyivDayStart } from '@/utils/timezone';
 
 const TZ = 'Europe/Kyiv';
@@ -171,14 +172,17 @@ export function BookingModal({
   if (summary) {
     return (
       <Modal open={open} onClose={handleClose} title="Recurring Series Created">
-        <div className="space-y-4">
-          <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 border border-green-200">
-            Created {summary.createdCount} booking{summary.createdCount !== 1 ? 's' : ''}
-            {summary.skippedCount > 0 && (
-              <span className="text-amber-600">
-                {' '}({summary.skippedCount} skipped due to conflicts)
-              </span>
-            )}
+        <div className="space-y-4 p-6">
+          <div className="flex items-center gap-2 rounded-lg border border-tertiary/30 bg-tertiary/10 px-4 py-3 text-body-sm text-on-surface">
+            <Icon name="check_circle" size={18} className="text-tertiary" />
+            <span>
+              Created {summary.createdCount} booking{summary.createdCount !== 1 ? 's' : ''}
+              {summary.skippedCount > 0 && (
+                <span className="text-on-surface-variant">
+                  {' '}({summary.skippedCount} skipped due to conflicts)
+                </span>
+              )}
+            </span>
           </div>
           <div className="flex justify-end">
             <Button type="button" onClick={handleClose}>
@@ -190,115 +194,181 @@ export function BookingModal({
     );
   }
 
+  const fieldClass =
+    'w-full rounded-lg border border-transparent bg-surface-variant py-3 pl-10 pr-4 text-body-md text-on-surface outline-none transition-all placeholder:text-outline focus:border-primary';
+
   return (
-    <Modal open={open} onClose={handleClose} title="New Booking">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="New Room Reservation"
+      subtitle="Secure a professional space for your team."
+    >
+      <form onSubmit={handleSubmit} className="space-y-6 p-6">
         {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
-            {error}
+          <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-on-surface">
+            <Icon name="error" size={18} className="text-error" />
+            <span>{error}</span>
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Room</label>
-          <select
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-          >
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} (capacity: {r.capacity})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Date</label>
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Start</label>
+        <div className="space-y-1">
+          <label className="text-label-md text-on-surface-variant" htmlFor="booking-room">
+            Room
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-outline">
+              <Icon name="meeting_room" size={20} />
+            </span>
             <select
-              value={startTime}
-              onChange={(e) => {
-                const newStart = e.target.value;
-                setStartTime(newStart);
-                const startIdx = TIME_OPTIONS.indexOf(newStart);
-                if (startIdx >= 0 && startIdx < TIME_OPTIONS.length - 1) {
-                  const nextTime = TIME_OPTIONS[startIdx + 1];
-                  if (TIME_OPTIONS.indexOf(endTime) <= startIdx) {
-                    setEndTime(nextTime);
+              id="booking-room"
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              className={`${fieldClass} appearance-none`}
+            >
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.capacity} person)
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+              <Icon name="expand_more" size={20} />
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-1">
+            <label className="text-label-md text-on-surface-variant" htmlFor="booking-date">
+              Date
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="calendar_today" size={18} />
+              </span>
+              <input
+                id="booking-date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full min-w-0 rounded-lg border border-transparent bg-surface-variant py-3 pl-8 pr-1 text-sm text-on-surface outline-none transition-all focus:border-primary [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-label-md text-on-surface-variant" htmlFor="booking-start">
+              Start Time
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="schedule" size={20} />
+              </span>
+              <select
+                id="booking-start"
+                value={startTime}
+                onChange={(e) => {
+                  const newStart = e.target.value;
+                  setStartTime(newStart);
+                  const startIdx = TIME_OPTIONS.indexOf(newStart);
+                  if (startIdx >= 0 && startIdx < TIME_OPTIONS.length - 1) {
+                    const nextTime = TIME_OPTIONS[startIdx + 1];
+                    if (TIME_OPTIONS.indexOf(endTime) <= startIdx) {
+                      setEndTime(nextTime);
+                    }
                   }
-                }
-              }}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            >
-              {TIME_OPTIONS.filter((t) => t < '19:00').map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+                }}
+                className={`${fieldClass} appearance-none`}
+              >
+                {TIME_OPTIONS.filter((t) => t < '19:00').map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="expand_more" size={20} />
+              </span>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">End</label>
-            <select
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            >
-              {TIME_OPTIONS.filter((t) => t > startTime).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+
+          <div className="space-y-1">
+            <label className="text-label-md text-on-surface-variant" htmlFor="booking-end">
+              End Time
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="timer" size={20} />
+              </span>
+              <select
+                id="booking-end"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className={`${fieldClass} appearance-none`}
+              >
+                {TIME_OPTIONS.filter((t) => t > startTime).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="expand_more" size={20} />
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-zinc-100 pt-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+        <div className="flex items-center justify-between border-t border-outline-variant py-4">
+          <div className="flex items-center gap-4">
+            <Icon name="repeat" size={24} className="text-primary-container" />
+            <div>
+              <p className="text-label-md font-bold text-on-surface">Repeat Weekly</p>
+              <p className="text-[12px] text-on-surface-variant">
+                Create a recurring series on {WEEKDAY_LABELS[getDayOfWeek()] || 'Mon'}s
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
             <input
               type="checkbox"
               checked={recurring}
               onChange={(e) => setRecurring(e.target.checked)}
-              className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+              className="peer sr-only"
             />
-            Repeat weekly on {WEEKDAY_LABELS[getDayOfWeek()] || 'Mon'}s
+            <div className="h-6 w-11 rounded-full bg-surface-variant transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-outline after:bg-surface-container-lowest after:transition-all after:content-[''] peer-checked:bg-primary-container peer-checked:after:translate-x-full" />
           </label>
+        </div>
 
-          {recurring && (
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Repeat until
-              </label>
+        {recurring && (
+          <div className="space-y-1">
+            <label className="text-label-md text-on-surface-variant" htmlFor="booking-until">
+              Repeat until
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                <Icon name="event_repeat" size={18} />
+              </span>
               <input
+                id="booking-until"
                 type="date"
                 required
                 value={untilDate}
                 onChange={(e) => setUntilDate(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="w-full min-w-0 rounded-lg border border-transparent bg-surface-variant py-3 pl-8 pr-1 text-sm text-on-surface outline-none transition-all focus:border-primary [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="-mx-6 -mb-6 flex flex-col-reverse gap-4 border-t border-outline-variant bg-surface-variant/30 px-6 py-5 md:flex-row md:justify-end">
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" loading={loading}>
-            {recurring ? 'Create Series' : 'Book'}
+            {recurring ? 'Create Series' : 'Confirm Reservation'}
           </Button>
         </div>
       </form>

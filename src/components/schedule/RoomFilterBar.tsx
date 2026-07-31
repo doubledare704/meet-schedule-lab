@@ -18,14 +18,14 @@ interface RoomFilterBarProps {
 }
 
 export const ROOM_COLORS = [
-  '#4f46e5',
-  '#10b981',
-  '#f59e0b',
-  '#e11d48',
-  '#06b6d4',
-  '#8b5cf6',
-  '#f97316',
-  '#14b8a6',
+  '#268bd2',
+  '#2aa198',
+  '#b58900',
+  '#d33682',
+  '#859900',
+  '#cb4b16',
+  '#6c71c4',
+  '#dc322f',
 ];
 
 const CAPACITY_OPTIONS = [
@@ -44,16 +44,16 @@ export function RoomFilterBar({
   onCapacityChange,
 }: RoomFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-4">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => onRoomChange(null)}
           className={clsx(
-            'rounded-full border px-3 py-1 text-sm font-medium transition-colors sm:px-4 sm:py-1.5',
+            'rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
             selectedRoomId === null
-              ? 'border-zinc-900 bg-zinc-900 text-white'
-              : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800',
+              ? 'bg-primary text-on-primary shadow-sm'
+              : 'border border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
           )}
         >
           All Rooms
@@ -64,10 +64,10 @@ export function RoomFilterBar({
             type="button"
             onClick={() => onRoomChange(room.id)}
             className={clsx(
-              'rounded-full border px-3 py-1 text-sm font-medium transition-colors sm:px-4 sm:py-1.5',
+              'rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
               selectedRoomId === room.id
-                ? 'border-zinc-900 bg-zinc-900 text-white'
-                : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800',
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'border border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
             )}
           >
             <span
@@ -80,13 +80,13 @@ export function RoomFilterBar({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <span className="text-sm text-zinc-500">Capacity:</span>
+        <span className="text-label-md text-on-surface-variant">Capacity:</span>
         <select
           value={capacityFilter ?? ''}
           onChange={(e) =>
             onCapacityChange(e.target.value ? Number(e.target.value) : null)
           }
-          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-label-md text-on-surface focus:border-primary focus:outline-none"
         >
           {CAPACITY_OPTIONS.map((opt) => (
             <option key={opt.label} value={opt.value ?? ''}>

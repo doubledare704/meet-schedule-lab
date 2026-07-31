@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { AuthCard } from '@/components/auth/AuthCard';
+import { Icon } from '@/components/ui/Icon';
 
 const DEMO_USERS = [
   { label: 'Alex Developer', email: 'alex@example.com', password: 'password123' },
@@ -13,11 +14,11 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function login(loginEmail: string, loginPassword: string) {
     setError(null);
     setLoading(true);
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
 
       const body = await res.json();
@@ -43,108 +44,105 @@ export default function LoginPage() {
     }
   }
 
-  async function fillDemo(demoEmail: string, demoPassword: string) {
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    login(email, password);
+  }
+
+  function fillDemo(demoEmail: string, demoPassword: string) {
     setEmail(demoEmail);
     setPassword(demoPassword);
-    setError(null);
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: demoEmail, password: demoPassword }),
-      });
-
-      const body = await res.json();
-
-      if (!body.success) {
-        setError(body.error || 'Login failed.');
-        return;
-      }
-
-      router.push('/schedule');
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    login(demoEmail, demoPassword);
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm border border-zinc-200">
-        <h1 className="text-2xl font-semibold text-zinc-900 mb-6">Sign in</h1>
-
+    <AuthCard activeTab="login">
+      <form className="flex w-full flex-col gap-2" onSubmit={handleSubmit} autoComplete="off">
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
-            {error}
+          <div className="mb-2 flex items-center gap-1 px-1">
+            <Icon name="error" size={16} className="text-error" />
+            <span className="text-label-sm text-error">{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-              placeholder="********"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        <div className="relative">
+          <input
+            id="email"
+            type="email"
+            required
+            placeholder=" "
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="peer w-full rounded-lg border border-outline/30 bg-transparent px-4 py-3 text-body-md text-on-surface outline-none transition-all focus:border-primary"
+          />
+          <label
+            htmlFor="email"
+            className="pointer-events-none absolute left-4 top-3 text-label-md text-on-surface-variant transition-all duration-150 peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-surface-container peer-focus:px-1 peer-focus:text-primary peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-surface-container peer-[:not(:placeholder-shown)]:px-1"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
-
-        <div className="mt-6">
-          <p className="text-xs text-zinc-500 mb-2 text-center">Quick fill demo accounts</p>
-          <div className="flex flex-col gap-2">
-            {DEMO_USERS.map((user) => (
-              <button
-                key={user.email}
-                type="button"
-                onClick={() => fillDemo(user.email, user.password)}
-                className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors text-left"
-              >
-                {user.label}
-              </button>
-            ))}
-          </div>
+            Work Email
+          </label>
         </div>
 
-        <p className="mt-6 text-center text-sm text-zinc-500">
-          No account?{' '}
-          <Link href="/register" className="font-medium text-zinc-900 hover:underline">
-            Sign up
-          </Link>
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            placeholder=" "
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="peer w-full rounded-lg border border-outline/30 bg-transparent px-4 py-3 pr-12 text-body-md text-on-surface outline-none transition-all focus:border-primary"
+          />
+          <label
+            htmlFor="password"
+            className="pointer-events-none absolute left-4 top-3 text-label-md text-on-surface-variant transition-all duration-150 peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-surface-container peer-focus:px-1 peer-focus:text-primary peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-surface-container peer-[:not(:placeholder-shown)]:px-1"
+          >
+            Password
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors hover:text-on-surface"
+          >
+            <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={20} />
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary-container py-3 text-label-md text-on-primary-container shadow-lg shadow-primary-container/20 transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+        >
+          {loading && <Icon name="progress_activity" size={18} className="animate-spin" />}
+          Sign In
+        </button>
+
+        <button
+          type="button"
+          className="py-1 text-center text-label-md text-on-surface-variant transition-colors hover:text-primary"
+        >
+          Forgot your password?
+        </button>
+      </form>
+
+      <div className="mt-6 w-full border-t border-outline/10 pt-6">
+        <p className="mb-3 text-center text-label-sm uppercase tracking-wider text-on-surface-variant">
+          Quick Test Accounts
         </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {DEMO_USERS.map((user) => (
+            <button
+              key={user.email}
+              type="button"
+              onClick={() => fillDemo(user.email, user.password)}
+              className="rounded-full border border-outline/10 bg-surface-variant px-3 py-1 text-label-sm text-on-surface transition-all duration-150 hover:bg-surface-dim"
+            >
+              {user.label}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+    </AuthCard>
   );
 }

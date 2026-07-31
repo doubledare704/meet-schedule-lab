@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
+import { AppShell } from '@/components/layout/AppShell';
 import { RoomFilterBar } from '@/components/schedule/RoomFilterBar';
 import { ScheduleGrid } from '@/components/schedule/ScheduleGrid';
 import { BookingModal } from '@/components/schedule/BookingModal';
@@ -65,26 +65,47 @@ export default function SchedulePage() {
         if (body.success) {
           setRooms(body.data);
         }
-      });
+      })
+      .catch(() => setRooms([]));
   }, [capacityFilter]);
 
-  useEffect(() => {
-    if (selectedRoomId && !rooms.some((r) => r.id === selectedRoomId)) {
-      setSelectedRoomId(null);
-    }
-  }, [rooms, selectedRoomId]);
+  const effectiveSelectedRoomId =
+    selectedRoomId !== null && rooms.some((r) => r.id === selectedRoomId)
+      ? selectedRoomId
+      : null;
 
-  const fetchBookings = useCallback(async () => {
+  const fetchBookings = useCallback(() => {
     const params = new URLSearchParams();
-    if (selectedRoomId) params.set('roomId', selectedRoomId);
-    const res = await fetch(`/api/bookings?${params.toString()}`);
-    const body = await res.json();
-    if (body.success) setBookings(body.data);
-  }, [selectedRoomId]);
+    if (effectiveSelectedRoomId) params.set('roomId', effectiveSelectedRoomId);
+    return fetch(`/api/bookings?${params.toString()}`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (body.success) setBookings(body.data);
+      })
+      .catch(() => setBookings([]));
+  }, [effectiveSelectedRoomId]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  const handleOpenNewModal = useCallback((roomId?: string | null) => {
+    const now = new Date();
+    const target = new Date(now);
+    target.setMinutes(target.getMinutes() >= 30 ? 60 : 30, 0, 0);
+    if (target.getHours() < 9) {
+      target.setHours(9, 0, 0, 0);
+    } else if (target.getHours() >= 18) {
+      target.setDate(target.getDate() + 1);
+      target.setHours(10, 0, 0, 0);
+    }
+    const end = new Date(target.getTime() + 30 * 60000);
+
+    setPrefilledRoomId(roomId ?? rooms[0]?.id ?? null);
+    setPrefilledStart(target.toISOString());
+    setPrefilledEnd(end.toISOString());
+    setModalOpen(true);
+  }, [rooms]);
 
   function handleSlotClick(roomId: string, startISO: string, endISO: string) {
     setPrefilledRoomId(roomId);
@@ -100,39 +121,36 @@ export default function SchedulePage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <Header userName={user.name} />
-      <main className="mx-auto max-w-7xl px-4 py-6 space-y-6">
-        <RoomFilterBar
-          rooms={rooms}
-          selectedRoomId={selectedRoomId}
-          capacityFilter={capacityFilter}
-          onRoomChange={setSelectedRoomId}
-          onCapacityChange={(cap) => {
-            setCapacityFilter(cap);
-            setSelectedRoomId(null);
-          }}
-        />
-        <ScheduleGrid
-          rooms={rooms}
-          selectedRoomId={selectedRoomId}
-          bookings={bookings}
-          currentUserId={user.id}
-          weekOffset={weekOffset}
-          onWeekChange={setWeekOffset}
-          onSlotClick={handleSlotClick}
-        />
-        <BookingModal
-          key={String(modalOpen) + prefilledStart}
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSuccess={handleBookingCreated}
-          rooms={rooms}
-          prefilledRoomId={prefilledRoomId}
-          prefilledStart={prefilledStart}
-          prefilledEnd={prefilledEnd}
-        />
-      </main>
-    </div>
+    <AppShell userName={user.name} onBookRoomClick={() => handleOpenNewModal(effectiveSelectedRoomId)}>
+      <RoomFilterBar
+        rooms={rooms}
+        selectedRoomId={effectiveSelectedRoomId}
+        capacityFilter={capacityFilter}
+        onRoomChange={setSelectedRoomId}
+        onCapacityChange={(cap) => {
+          setCapacityFilter(cap);
+          setSelectedRoomId(null);
+        }}
+      />
+      <ScheduleGrid
+        rooms={rooms}
+        selectedRoomId={effectiveSelectedRoomId}
+        bookings={bookings}
+        currentUserId={user.id}
+        weekOffset={weekOffset}
+        onWeekChange={setWeekOffset}
+        onSlotClick={handleSlotClick}
+      />
+      <BookingModal
+        key={String(modalOpen) + prefilledStart}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleBookingCreated}
+        rooms={rooms}
+        prefilledRoomId={prefilledRoomId}
+        prefilledStart={prefilledStart}
+        prefilledEnd={prefilledEnd}
+      />
+    </AppShell>
   );
 }

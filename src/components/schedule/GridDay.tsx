@@ -1,6 +1,7 @@
 'use client';
 
 import { clsx } from 'clsx';
+import { Icon } from '@/components/ui/Icon';
 import { getWallClockTime } from '@/utils/timezone';
 
 const TZ = 'Europe/Kyiv';
@@ -53,14 +54,14 @@ export function GridDay({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-500">
+        <span className="text-label-md text-on-surface-variant">
           {day.day} {WEEKDAY_LABELS[day.weekday]}
         </span>
         {isToday && (
-          <span className="text-xs font-medium text-red-500">Now</span>
+          <span className="text-label-md font-medium text-error">Now</span>
         )}
       </div>
-      <div className="mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+      <div className="mt-2 overflow-hidden rounded-xl border border-outline-variant bg-surface">
         {HALF_HOURS.map((time, rowIdx) => {
           const hour = Math.floor(rowIdx / 2) + 9;
           const minute = rowIdx % 2 === 0 ? 0 : 30;
@@ -81,12 +82,12 @@ export function GridDay({
             <div
               key={rowIdx}
               className={clsx(
-                'flex min-h-[48px] items-center border-b border-zinc-100 last:border-0',
-                hasBooking ? 'bg-zinc-50' : 'cursor-pointer hover:bg-indigo-50/30',
+                'flex min-h-[48px] items-center border-b border-outline-variant last:border-0',
+                hasBooking ? 'bg-surface-container-low' : 'cursor-pointer hover:bg-primary-container/10',
               )}
               onClick={() => !hasBooking && onSlotClick(day, hour, minute)}
             >
-              <div className="w-14 shrink-0 text-center text-[11px] text-zinc-400">
+              <div className="w-14 shrink-0 text-center text-[11px] text-outline">
                 {time}
               </div>
               <div className="flex-1 space-y-1 px-2 py-1">
@@ -101,13 +102,14 @@ export function GridDay({
                     className={clsx(
                       'block w-full rounded-md px-2 py-1.5 text-left text-xs font-medium shadow-sm transition-opacity hover:opacity-90',
                       booking.userId === currentUserId
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-400 text-white',
+                        ? 'bg-primary text-on-primary'
+                        : 'border border-outline bg-surface-container text-on-surface',
                     )}
                   >
                     {isAllRooms && (
                       <span className="font-medium">{booking.room.name} </span>
                     )}
+                    <Icon name="schedule" size={11} className="mr-0.5" />
                     {new Date(booking.startTime).toLocaleTimeString('en-GB', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -123,7 +125,7 @@ export function GridDay({
                   </button>
                 ))}
                 {!hasBooking && (
-                  <span className="text-[11px] text-zinc-300">Free</span>
+                  <span className="text-[11px] text-on-surface-variant/40">Free</span>
                 )}
               </div>
             </div>

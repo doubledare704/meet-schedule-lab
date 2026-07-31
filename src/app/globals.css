@@ -1,28 +1,255 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fdf6e3;
+  --foreground: #586e75;
+  --surface: #fdf6e3;
+  --surface-dim: #eee8d5;
+  --surface-bright: #f1fbff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eee8d5;
+  --surface-container: #eee8d5;
+  --surface-container-high: #d5ecf4;
+  --surface-container-highest: #93a1a1;
+  --surface-variant: #eee8d5;
+  --on-surface: #071e24;
+  --on-surface-variant: #404751;
+  --on-background: #586e75;
+  --outline: #93a1a1;
+  --outline-strong: #586e75;
+  --outline-variant: #eee8d5;
+  --primary: #268bd2;
+  --on-primary: #ffffff;
+  --primary-container: #007abe;
+  --on-primary-container: #fdfcff;
+  --primary-fixed: #cee5ff;
+  --primary-fixed-dim: #97cbff;
+  --on-primary-fixed: #001d33;
+  --on-primary-fixed-variant: #004a76;
+  --inverse-primary: #97cbff;
+  --secondary: #b58900;
+  --on-secondary: #ffffff;
+  --secondary-container: #feca4d;
+  --on-secondary-container: #725500;
+  --secondary-fixed: #ffdf9b;
+  --secondary-fixed-dim: #f2bf43;
+  --on-secondary-fixed: #251a00;
+  --on-secondary-fixed-variant: #5b4300;
+  --tertiary: #2aa198;
+  --on-tertiary: #002b36;
+  --tertiary-container: #00837b;
+  --on-tertiary-container: #f3fffc;
+  --tertiary-fixed: #89f5ea;
+  --tertiary-fixed-dim: #6cd8ce;
+  --on-tertiary-fixed: #00201e;
+  --on-tertiary-fixed-variant: #00504b;
+  --error: #dc322f;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --inverse-surface: #1e343a;
+  --inverse-on-surface: #ddf5fd;
+  --surface-tint: #00639b;
+}
+
+.dark {
+  --bg: #002b36;
+  --foreground: #93a1a1;
+  --surface: #073642;
+  --surface-dim: #00212b;
+  --surface-bright: #073642;
+  --surface-container-lowest: #00212b;
+  --surface-container-low: #073642;
+  --surface-container: #073642;
+  --surface-container-high: #0b4a57;
+  --surface-container-highest: #586e75;
+  --surface-variant: #073642;
+  --on-surface: #93a1a1;
+  --on-surface-variant: #839496;
+  --on-background: #93a1a1;
+  --outline: #586e75;
+  --outline-strong: #93a1a1;
+  --outline-variant: #073642;
+  --primary: #268bd2;
+  --on-primary: #002b36;
+  --primary-container: #006098;
+  --on-primary-container: #cee5ff;
+  --primary-fixed: #cee5ff;
+  --primary-fixed-dim: #97cbff;
+  --on-primary-fixed: #002b36;
+  --on-primary-fixed-variant: #004a76;
+  --inverse-primary: #268bd2;
+  --secondary: #b58900;
+  --on-secondary: #002b36;
+  --secondary-container: #b58900;
+  --on-secondary-container: #fdf6e3;
+  --secondary-fixed: #ffdf9b;
+  --secondary-fixed-dim: #f2bf43;
+  --on-secondary-fixed: #251a00;
+  --on-secondary-fixed-variant: #5b4300;
+  --tertiary: #2aa198;
+  --on-tertiary: #002b36;
+  --tertiary-container: #006761;
+  --on-tertiary-container: #d5f5ef;
+  --tertiary-fixed: #89f5ea;
+  --tertiary-fixed-dim: #6cd8ce;
+  --on-tertiary-fixed: #00201e;
+  --on-tertiary-fixed-variant: #00504b;
+  --error: #dc322f;
+  --on-error: #002b36;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --inverse-surface: #eee8d5;
+  --inverse-on-surface: #002b36;
+  --surface-tint: #97cbff;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-background: var(--bg);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-on-background: var(--on-background);
+  --color-outline: var(--outline);
+  --color-outline-strong: var(--outline-strong);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-inverse-primary: var(--inverse-primary);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-surface-tint: var(--surface-tint);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  --font-code: var(--font-geist-mono);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--letter-spacing: -0.02em;
+  --text-headline-lg-mobile--font-weight: 600;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 500;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+  --text-label-md: 14px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 500;
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.05em;
+  --text-label-sm--font-weight: 500;
+  --text-code: 14px;
+  --text-code--line-height: 20px;
+  --text-code--font-weight: 400;
+
+  --radius-DEFAULT: 0.25rem;
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
 }
 
 body {
-  background: var(--background);
+  background: var(--bg);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background-color: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--surface-dim);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--outline);
+  border-radius: 10px;
+}
+
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--error);
+  z-index: 20;
+}
+.current-time-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--error);
+  border-radius: 50%;
 }
 
 @keyframes slide-up {
@@ -38,4 +265,19 @@ body {
 
 @utility animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@utility animate-scale-in {
+  animation: scale-in 0.2s ease-out;
 }

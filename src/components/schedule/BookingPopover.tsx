@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { CalendarClock, User } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface BookingData {
   id: string;
@@ -44,22 +44,22 @@ export function BookingPopover({ booking, onClose }: BookingPopoverProps) {
   return (
     <div
       ref={ref}
-      className="absolute z-30 w-64 rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
+      className="absolute z-30 w-64 rounded-lg border border-outline-variant bg-surface p-4 shadow-lg"
       style={{ bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 8 }}
     >
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-zinc-700">
-          <User size={16} className="text-zinc-400 shrink-0" />
+        <div className="flex items-center gap-2 text-body-sm text-on-surface">
+          <Icon name="person" size={16} className="shrink-0 text-outline" />
           <span className="font-medium">{booking.user.name}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-zinc-600">
-          <CalendarClock size={16} className="text-zinc-400 shrink-0" />
+        <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
+          <Icon name="calendar_clock" size={16} className="shrink-0 text-outline" />
           <span>
             {formatDate(booking.startTime)}, {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
           </span>
         </div>
-        <div className="pt-2 border-t border-zinc-100">
-          <p className="text-xs text-zinc-400 text-center">This slot is taken</p>
+        <div className="border-t border-outline-variant pt-2">
+          <p className="text-center text-label-sm text-on-surface-variant">This slot is taken</p>
         </div>
       </div>
     </div>

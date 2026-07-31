@@ -14,19 +14,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    'bg-zinc-900 text-white hover:bg-zinc-800 focus:ring-zinc-900 disabled:bg-zinc-400',
+    'bg-primary text-on-primary hover:brightness-110 focus:ring-primary disabled:bg-outline',
   secondary:
-    'bg-white text-zinc-700 border border-zinc-300 hover:bg-zinc-50 focus:ring-zinc-400',
+    'bg-transparent text-on-surface border border-outline hover:bg-surface-container focus:ring-outline',
   ghost:
-    'bg-transparent text-zinc-600 hover:bg-zinc-100 focus:ring-zinc-400',
+    'bg-transparent text-foreground border border-outline-strong hover:bg-surface-variant focus:ring-outline',
   danger:
-    'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-400',
+    'bg-error text-on-error hover:brightness-110 focus:ring-error disabled:bg-outline',
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-xs rounded-md',
-  md: 'px-4 py-2 text-sm rounded-lg',
-  lg: 'px-6 py-3 text-base rounded-lg',
+  sm: 'px-3 py-1.5 text-label-sm rounded-lg',
+  md: 'px-4 py-2 text-label-md rounded-lg',
+  lg: 'px-6 py-3 text-label-md rounded-lg',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -36,7 +36,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={clsx(
-          'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed active:scale-[0.98]',
           variantClasses[variant],
           sizeClasses[size],
           className,
@@ -44,30 +44,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && (
-          <svg
-            className="-ml-1 mr-2 h-4 w-4 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
+          <IconSpin />
         )}
         {children}
       </button>
     );
   },
 );
+
+function IconSpin() {
+  return (
+    <span className="material-symbols-outlined -ml-1 mr-2 h-4 w-4 animate-spin text-[16px]">
+      progress_activity
+    </span>
+  );
+}
 
 Button.displayName = 'Button';

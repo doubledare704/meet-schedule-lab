@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, Fragment } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
+import { Icon } from '@/components/ui/Icon';
 import { getWallClockTime, getKyivDateParts, getKyivDayStart } from '@/utils/timezone';
 import { BookingBlock } from './BookingBlock';
 import { BookingPopover } from './BookingPopover';
@@ -69,6 +69,10 @@ function isToday(day: DayInfo): boolean {
   return todayParts.year === day.year && todayParts.month === day.month && todayParts.day === day.day;
 }
 
+function isWeekend(day: DayInfo): boolean {
+  return day.weekday === 0 || day.weekday === 6;
+}
+
 function getRoomColor(roomId: string, rooms: RoomData[]): string {
   const idx = rooms.findIndex((r) => r.id === roomId);
   return ROOM_COLORS[idx >= 0 ? idx % ROOM_COLORS.length : 0];
@@ -112,12 +116,8 @@ export function ScheduleGrid({
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const todayIdx = days.findIndex(isToday);
-    setMobileDayIdx(todayIdx >= 0 ? todayIdx : 0);
-  }, [days]);
-
   const todayIdx = days.findIndex(isToday);
+  const activeMobileDayIdx = mobileDayIdx >= 0 ? mobileDayIdx : todayIdx >= 0 ? todayIdx : 0;
   const isAllRooms = selectedRoomId === null;
 
   const filteredBookings = useMemo(() => {
@@ -152,22 +152,40 @@ export function ScheduleGrid({
 
   return (
     <div className="relative">
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => onWeekChange(weekOffset - 1)}
-          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <span className="text-sm font-medium text-zinc-700">{weekLabel}</span>
-        <button
-          type="button"
-          onClick={() => onWeekChange(weekOffset + 1)}
-          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-        >
-          <ChevronRight size={20} />
-        </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-low p-0.5">
+          <button
+            type="button"
+            onClick={() => onWeekChange(weekOffset - 1)}
+            aria-label="Previous week"
+            className="rounded p-1 text-on-surface-variant transition-colors hover:bg-surface-variant"
+          >
+            <Icon name="chevron_left" size={20} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onWeekChange(0)}
+            className="rounded px-3 py-1 text-label-md text-on-surface-variant transition-colors hover:bg-surface-variant"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => onWeekChange(weekOffset + 1)}
+            aria-label="Next week"
+            className="rounded p-1 text-on-surface-variant transition-colors hover:bg-surface-variant"
+          >
+            <Icon name="chevron_right" size={20} />
+          </button>
+        </div>
+        <h2 className="text-headline-md font-bold text-on-surface">{weekLabel}</h2>
+      </div>
+
+      <div className="mb-4 flex items-center gap-2 rounded-lg border-l-4 border-primary bg-surface-container px-4 py-2">
+        <Icon name="info" size={18} className="text-primary" />
+        <p className="text-label-md text-on-surface-variant">
+          Times displayed in your local time (UTC+2). Enforcing office hours (09:00&ndash;19:00 Europe/Kyiv).
+        </p>
       </div>
 
       <div className="lg:hidden">
@@ -179,10 +197,10 @@ export function ScheduleGrid({
               onClick={() => setMobileDayIdx(i)}
               className={clsx(
                 'shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
-                i === mobileDayIdx
-                  ? 'bg-zinc-900 text-white'
-                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200',
-                isToday(day) && i !== mobileDayIdx && 'ring-1 ring-inset ring-zinc-300',
+                i === activeMobileDayIdx
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
+                isToday(day) && i !== activeMobileDayIdx && 'ring-1 ring-inset ring-primary',
               )}
             >
               <div>{WEEKDAY_LABELS[day.weekday]}</div>
@@ -191,10 +209,10 @@ export function ScheduleGrid({
           ))}
         </div>
 
-        {mobileDayIdx >= 0 && (
+        {activeMobileDayIdx >= 0 && (
           <div className="relative">
             {days.map((day, i) => (
-              <div key={i} className={clsx(i !== mobileDayIdx && 'hidden')}>
+              <div key={i} className={clsx(i !== activeMobileDayIdx && 'hidden')}>
                 <GridDay
                   day={day}
                   bookings={bookingsByDay.get(formatDateKey(day)) ?? []}
@@ -211,32 +229,45 @@ export function ScheduleGrid({
         )}
       </div>
 
-      <div className="hidden lg:block overflow-x-auto">
+      <div className="hidden overflow-x-auto lg:block">
         <div
-          className="grid min-w-[900px]"
+          className="grid min-w-[900px] overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm"
           style={{
-            gridTemplateColumns: `60px repeat(7, 1fr)`,
+            gridTemplateColumns: `80px repeat(7, 1fr)`,
             gridTemplateRows: `auto repeat(20, 28px)`,
           }}
         >
-          <div className="sticky top-0 z-20 bg-white border-b border-zinc-200" />
+          <div className="sticky top-0 z-20 border-b border-outline-variant bg-surface-container-low" />
           {days.map((day, i) => (
             <div
               key={i}
               className={clsx(
-                'sticky top-0 z-20 border-b border-zinc-200 bg-white px-2 py-2 text-center text-xs font-medium',
-                isToday(day) && 'text-indigo-600',
+                'sticky top-0 z-20 border-b border-r border-outline-variant bg-surface-container-low px-2 py-2 text-center',
+                isToday(day) && 'bg-primary-fixed bg-opacity-10 ring-inset ring-2 ring-primary',
+                isWeekend(day) && !isToday(day) && 'bg-surface-container-lowest opacity-60',
               )}
             >
-              <div>{WEEKDAY_LABELS[day.weekday]}</div>
-              <div className="text-zinc-400">{day.day}</div>
+              <div
+                className={clsx(
+                  'text-label-sm uppercase tracking-wider',
+                  isToday(day) ? 'font-bold text-primary' : 'text-outline',
+                )}
+              >
+                {WEEKDAY_LABELS[day.weekday]}
+              </div>
+              <div className={clsx('text-headline-md', isToday(day) ? 'font-bold text-primary' : 'text-on-surface')}>
+                {day.day}
+              </div>
+              {isToday(day) && (
+                <div className="mt-0.5 text-[10px] font-bold text-primary">TODAY</div>
+              )}
             </div>
           ))}
 
           {HALF_HOURS.map((time, rowIdx) => (
             <Fragment key={rowIdx}>
               <div
-                className="flex items-center justify-end pr-2 text-xs text-zinc-400 border-r border-zinc-100"
+                className="flex items-center justify-end border-r border-outline-variant pr-2 text-label-sm text-outline"
                 style={{ gridRow: rowIdx + 2 }}
               >
                 {time}
@@ -248,8 +279,8 @@ export function ScheduleGrid({
                   <div
                     key={`cell-${dayIdx}-${rowIdx}`}
                     className={clsx(
-                      'relative border-b border-r border-zinc-100 cursor-pointer transition-colors hover:bg-zinc-50',
-                      rowIdx % 2 === 0 ? 'border-t-0' : '',
+                      'relative cursor-pointer border-b border-r border-outline-variant transition-colors hover:bg-primary-container hover:bg-opacity-5',
+                      isWeekend(day) && 'bg-surface-container-lowest opacity-60',
                     )}
                     style={{ gridRow: rowIdx + 2, gridColumn: dayIdx + 2 }}
                     onClick={() => handleSlotClick(day, hour, minute)}
@@ -270,26 +301,26 @@ export function ScheduleGrid({
               >
                 {isToday(day) && currentTimePos !== null && (
                   <div
-                    className="absolute left-0 right-0 z-20 h-[2px] bg-red-500"
+                    className="current-time-line"
                     style={{ top: `${currentTimePos}%` }}
                   />
                 )}
                 {dayBookings.map((booking) => (
-                  <div key={booking.id} className="relative">
-                    <BookingBlock
-                      booking={booking}
-                      currentUserId={currentUserId}
-                      roomColor={getRoomColor(booking.roomId, rooms)}
-                      isAllRooms={isAllRooms}
-                      onClick={handleBookingClick}
-                    />
+                  <BookingBlock
+                    key={booking.id}
+                    booking={booking}
+                    currentUserId={currentUserId}
+                    roomColor={getRoomColor(booking.roomId, rooms)}
+                    isAllRooms={isAllRooms}
+                    onClick={handleBookingClick}
+                  >
                     {selectedBooking?.id === booking.id && (
                       <BookingPopover
                         booking={booking}
                         onClose={() => setSelectedBooking(null)}
                       />
                     )}
-                  </div>
+                  </BookingBlock>
                 ))}
               </div>
             );

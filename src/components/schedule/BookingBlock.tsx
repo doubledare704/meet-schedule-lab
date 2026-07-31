@@ -1,6 +1,7 @@
 'use client';
 
 import { clsx } from 'clsx';
+import { Icon } from '@/components/ui/Icon';
 import { getWallClockTime } from '@/utils/timezone';
 
 interface BookingData {
@@ -19,6 +20,7 @@ interface BookingBlockProps {
   roomColor: string;
   isAllRooms: boolean;
   onClick: (booking: BookingData) => void;
+  children?: React.ReactNode;
 }
 
 const TZ = 'Europe/Kyiv';
@@ -35,6 +37,7 @@ export function BookingBlock({
   roomColor,
   isAllRooms,
   onClick,
+  children,
 }: BookingBlockProps) {
   const start = new Date(booking.startTime);
   const end = new Date(booking.endTime);
@@ -48,15 +51,26 @@ export function BookingBlock({
 
   const topPct = ((startMin - dayStartMin) / 600) * 100;
   const heightPct = (durationMin / 600) * 100;
+  const isShort = durationMin <= 30;
   const isOwn = booking.user.id === currentUserId;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onClick(booking)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(booking);
+        }
+      }}
       className={clsx(
-        'pointer-events-auto absolute left-0.5 right-0.5 z-10 flex cursor-pointer flex-col justify-start overflow-hidden rounded-md px-2 py-1 text-left text-xs leading-tight shadow-sm transition-opacity hover:opacity-90',
-        isOwn ? 'bg-indigo-600 text-white' : 'bg-slate-400 text-white',
+        'pointer-events-auto absolute left-0.5 right-0.5 z-10 flex cursor-pointer text-left text-label-sm leading-tight shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary',
+        isShort ? 'flex-row items-center justify-between px-2 py-0.5 text-[11px]' : 'flex-col justify-between overflow-visible rounded-lg px-2 py-1.5',
+        isOwn
+          ? 'bg-primary text-on-primary shadow-md'
+          : 'border border-outline bg-surface-container text-on-surface',
       )}
       style={{
         top: `${topPct}%`,
@@ -64,13 +78,34 @@ export function BookingBlock({
         borderLeft: isAllRooms ? `3px solid ${roomColor}` : undefined,
       }}
     >
-      {isAllRooms && (
-        <span className="font-medium">{booking.room.name}</span>
+      {isShort ? (
+        <>
+          <span className="truncate font-bold">
+            {isAllRooms ? booking.room.name : isOwn ? 'Reserved' : booking.user.name}
+          </span>
+          <span className="ml-1 shrink-0 text-[10px] opacity-90">
+            {formatTime(booking.startTime)}-{formatTime(booking.endTime)}
+          </span>
+        </>
+      ) : (
+        <>
+          <div>
+            <span className="block truncate font-bold">
+              {isAllRooms ? booking.room.name : isOwn ? 'Reserved' : booking.user.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <Icon name="schedule" size={12} />
+            <span className="truncate">
+              {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+            </span>
+            {isAllRooms && !isOwn && (
+              <span className="ml-auto truncate opacity-80">{booking.user.name}</span>
+            )}
+          </div>
+        </>
       )}
-      <span>
-        {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-      </span>
-      {!isOwn && <span className="opacity-80">{booking.user.name}</span>}
-    </button>
+      {children}
+    </div>
   );
 }

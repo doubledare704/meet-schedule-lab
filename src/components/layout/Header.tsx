@@ -1,40 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut } from 'lucide-react';
-import { clsx } from 'clsx';
-import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { NotificationToast } from '@/components/notifications/NotificationToast';
 
 interface HeaderProps {
   userName: string;
+  source: EventSource | null;
 }
 
-export function Header({ userName }: HeaderProps) {
+export function Header({ userName, source }: HeaderProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [source, setSource] = useState<EventSource | null>(null);
-
-  useEffect(() => {
-    const eventSource = new EventSource('/api/notifications/sse');
-
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
-
-    setSource(eventSource);
-
-    return () => {
-      eventSource.close();
-      setSource(null);
-    };
-  }, []);
 
   async function handleLogout() {
-    source?.close();
     const res = await fetch('/api/auth/logout', { method: 'POST' });
     if (res.ok) {
       router.push('/login');
@@ -42,53 +22,36 @@ export function Header({ userName }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-4">
-        <div className="flex items-center gap-3 sm:gap-6">
-          <Link
-            href="/schedule"
-            className="text-base font-semibold text-zinc-900 hover:text-zinc-700 transition-colors sm:text-lg"
-          >
-            <span className="hidden sm:inline">Meet Schedule Lab</span>
-            <span className="sm:hidden">MSL</span>
-          </Link>
-          <nav className="flex items-center gap-1">
-            <Link
-              href="/schedule"
-              className={clsx(
-                'rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3',
-                pathname === '/schedule'
-                  ? 'bg-zinc-100 text-zinc-900'
-                  : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-              )}
-            >
-              <span className="hidden sm:inline">Schedule</span>
-              <span className="sm:hidden">Sched</span>
-            </Link>
-            <Link
-              href="/my-bookings"
-              className={clsx(
-                'rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3',
-                pathname === '/my-bookings'
-                  ? 'bg-zinc-100 text-zinc-900'
-                  : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50',
-              )}
-            >
-              <span className="hidden sm:inline">My Bookings</span>
-              <span className="sm:hidden">Mine</span>
-            </Link>
-          </nav>
-        </div>
+    <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface">
+      <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        <Link href="/schedule" className="text-headline-md font-bold text-primary">
+          meet-schedule-lab
+        </Link>
+
         <div className="flex items-center gap-2">
           <NotificationBell source={source} />
-          <span className="text-sm text-zinc-500">{userName}</span>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut size={16} className="mr-1" />
-            Log out
-          </Button>
+          <ThemeToggle />
+          <span className="material-symbols-outlined hidden rounded-full p-2 text-on-surface-variant sm:inline-block">
+            settings
+          </span>
+          <div className="ml-1 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary bg-surface-container-high text-label-md font-medium text-on-surface">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <span className="hidden text-label-md text-on-surface-variant md:inline">
+              {userName}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="ml-1 rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-error"
+            aria-label="Log out"
+          >
+            <Icon name="logout" size={20} />
+          </button>
         </div>
       </div>
-      <NotificationToast source={source} />
     </header>
   );
 }

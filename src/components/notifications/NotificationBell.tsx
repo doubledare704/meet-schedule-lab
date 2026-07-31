@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
+import { Icon } from '@/components/ui/Icon';
 
 interface ExpiringNotification {
   bookingId: string;
@@ -18,7 +18,6 @@ interface NotificationBellProps {
 export function NotificationBell({ source }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<ExpiringNotification[]>([]);
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!source) return;
@@ -43,64 +42,130 @@ export function NotificationBell({ source }: NotificationBellProps) {
   }, [source]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (open) {
+      document.addEventListener('keydown', handleKeydown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeydown);
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   const unreadCount = notifications.length;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+        aria-label="Notifications"
+        className="relative rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
       >
-        <Bell size={18} />
+        <Icon name="notifications" size={20} />
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-16px)] rounded-lg border border-zinc-200 bg-white shadow-lg">
-          <div className="border-b border-zinc-100 px-4 py-2 text-sm font-medium text-zinc-700">
-            Upcoming
+      <div
+        className={clsx(
+          'fixed inset-0 z-[60] bg-on-background/20 backdrop-blur-sm transition-opacity duration-300',
+          open ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        onClick={() => setOpen(false)}
+      />
+
+      <aside
+        className={clsx(
+          'fixed inset-y-0 right-0 z-[70] flex w-[400px] max-w-[100vw] flex-col border-l border-outline-variant bg-surface-bright shadow-2xl transition-transform duration-300',
+          open ? 'translate-x-0' : 'translate-x-full',
+        )}
+      >
+        <div className="border-b border-outline-variant px-6 py-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-headline-md font-bold text-on-surface">Notifications</h3>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full p-2 transition-colors hover:bg-surface-container-low"
+              aria-label="Close notifications"
+            >
+              <Icon name="close" size={20} />
+            </button>
           </div>
+          <div className="flex items-center justify-between">
+            <p className="text-label-sm text-on-surface-variant">
+              You have {unreadCount} unread alert{unreadCount !== 1 ? 's' : ''}
+            </p>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setNotifications([])}
+                className="text-label-sm font-bold text-primary hover:underline"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="custom-scrollbar flex-1 overflow-y-auto">
           {notifications.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-zinc-400">
-              No upcoming alerts
+            <div className="px-6 py-16 text-center text-body-md text-on-surface-variant">
+              <Icon name="notifications_off" size={40} className="mb-4 text-outline" />
+              <p>No upcoming alerts</p>
             </div>
           ) : (
-            <div className="max-h-64 overflow-y-auto">
-              {notifications.map((n) => (
+            <div className="divide-y divide-outline-variant">
+              {notifications.map((n, idx) => (
                 <div
                   key={n.bookingId}
                   className={clsx(
-                    'border-b border-zinc-50 px-4 py-3 text-sm last:border-0',
+                    'relative cursor-pointer p-6 transition-colors',
+                    idx === 0 ? 'border-l-4 border-primary bg-primary-fixed/10' : 'hover:bg-surface-container-low',
                   )}
                 >
-                  <div className="font-medium text-zinc-800">{n.roomName}</div>
-                  <div className="text-zinc-500">
-                    Starts in {n.minutesUntilStart} min at{' '}
-                    {new Date(n.startTime).toLocaleTimeString('en-GB', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                  <div className="flex gap-4">
+                    <span className="mt-0.5">
+                      <Icon name="timer" size={20} filled={idx === 0} className="text-primary" />
+                    </span>
+                    <div className="flex-1">
+                      <h4 className="text-label-md font-bold text-on-surface">Slot Starting Soon</h4>
+                      <p className="mt-1 text-body-sm leading-relaxed text-on-surface-variant">
+                        Your booking in <strong className="text-on-surface">{n.roomName}</strong> starts
+                        in {n.minutesUntilStart} min at{' '}
+                        {new Date(n.startTime).toLocaleTimeString('en-GB', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                        .
+                      </p>
+                    </div>
                   </div>
+                  {idx === 0 && (
+                    <span className="absolute right-4 top-4 h-2 w-2 rounded-full bg-primary" />
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
-      )}
-    </div>
+
+        <div className="border-t border-outline-variant bg-surface-container-low p-6">
+          <button
+            type="button"
+            className="w-full py-2 text-center text-label-md text-on-surface-variant transition-colors hover:text-primary"
+          >
+            View Notification History
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

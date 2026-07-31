@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
-import { X } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface Toast {
   id: string;
@@ -55,18 +55,20 @@ export function NotificationToast({ source }: NotificationToastProps) {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-[80] flex flex-col gap-2">
       {toasts.map((toast) => (
         <div
           key={toast.id}
           className={clsx(
-            'flex items-start gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-lg',
-            'animate-slide-up',
+            'flex items-start gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3 shadow-lg animate-slide-up',
           )}
         >
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-900">{toast.roomName}</p>
-            <p className="text-xs text-zinc-500">
+          <span className="mt-0.5">
+            <Icon name="timer" size={20} className="text-primary" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-label-md font-medium text-on-surface">{toast.roomName}</p>
+            <p className="text-body-sm text-on-surface-variant">
               Starts in {toast.minutesUntilStart} min at{' '}
               {new Date(toast.startTime).toLocaleTimeString('en-GB', {
                 hour: '2-digit',
@@ -77,9 +79,10 @@ export function NotificationToast({ source }: NotificationToastProps) {
           <button
             type="button"
             onClick={() => dismiss(toast.id)}
-            className="shrink-0 rounded p-0.5 text-zinc-400 hover:text-zinc-600 transition-colors"
+            className="shrink-0 rounded p-0.5 text-on-surface-variant transition-colors hover:text-on-surface"
+            aria-label="Dismiss"
           >
-            <X size={14} />
+            <Icon name="close" size={14} />
           </button>
         </div>
       ))}

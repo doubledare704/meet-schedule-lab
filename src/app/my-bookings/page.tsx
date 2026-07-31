@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
+import { AppShell } from '@/components/layout/AppShell';
 import { CancelBookingModal } from '@/components/bookings/CancelBookingModal';
+import { Icon } from '@/components/ui/Icon';
 import { clsx } from 'clsx';
 
 interface UserData {
@@ -21,11 +22,16 @@ interface BookingData {
   user: { id: string; name: string };
 }
 
+type Tab = 'upcoming' | 'past';
+
 export default function MyBookingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('upcoming');
   const [cancelTarget, setCancelTarget] = useState<BookingData | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -35,11 +41,16 @@ export default function MyBookingsPage() {
       .then((body) => {
         if (!body.success) {
           router.push('/login');
+          setLoading(false);
           return;
         }
         setUser(body.data.user);
+        setAuthChecked(true);
       })
-      .catch(() => router.push('/login'));
+      .catch(() => {
+        setLoading(false);
+        router.push('/login');
+      });
   }, [router]);
 
   useEffect(() => {
@@ -50,16 +61,23 @@ export default function MyBookingsPage() {
       .then((body) => {
         if (body.success) {
           setBookings(body.data);
+        } else {
+          setLoadError(body.error || 'Failed to load your bookings.');
         }
       })
+      .catch(() => setLoadError('Network error while loading your bookings.'))
       .finally(() => setLoading(false));
   }, [user]);
 
   async function refreshBookings() {
-    const res = await fetch('/api/bookings?mine=true');
-    const body = await res.json();
-    if (body.success) {
-      setBookings(body.data);
+    try {
+      const res = await fetch('/api/bookings?mine=true');
+      const body = await res.json();
+      if (body.success) {
+        setBookings(body.data);
+      }
+    } catch {
+      setLoadError('Network error while loading your bookings.');
     }
   }
 
@@ -71,53 +89,104 @@ export default function MyBookingsPage() {
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.startTime) > now);
   const past = bookings.filter((b) => new Date(b.startTime) <= now);
+  const visible = tab === 'upcoming' ? upcoming : past;
+
+  if (!authChecked || (!user && loading)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 text-on-surface-variant">
+          <span className="h-8 w-8 animate-spin rounded-full border-4 border-outline border-t-primary" />
+          <p className="text-body-md">Loading your reservations...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <Header userName={user.name} />
-      <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-        <h2 className="text-xl font-semibold text-zinc-900">My Bookings</h2>
+    <AppShell userName={user.name}>
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="mb-1 text-headline-lg text-on-surface">My Reservations</h1>
+            <p className="text-body-md text-on-surface-variant">
+              Manage and track your upcoming room bookings across campus.
+            </p>
+          </div>
+          <div className="inline-flex self-start rounded-lg bg-surface-variant p-1">
+            {(['upcoming', 'past'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={clsx(
+                  'rounded-md px-6 py-2 text-label-md transition-all',
+                  tab === t
+                    ? 'bg-surface text-primary shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface',
+                )}
+              >
+                {t === 'upcoming' ? 'Upcoming' : 'Past'}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
-          <div className="py-12 text-center text-sm text-zinc-400">Loading...</div>
-        ) : bookings.length === 0 ? (
-          <div className="py-12 text-center text-sm text-zinc-400">
-            No bookings yet.{' '}
+          <div className="py-12 text-center text-body-sm text-on-surface-variant">Loading...</div>
+        ) : loadError && bookings.length === 0 ? (
+          <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-error/30 bg-error-container/20 p-10 text-center">
+            <Icon name="cloud_off" size={32} className="text-error" />
+            <p className="text-body-md text-on-surface">{loadError}</p>
             <button
               type="button"
-              onClick={() => router.push('/schedule')}
-              className="text-zinc-900 underline underline-offset-2 hover:text-zinc-700"
+              onClick={() => {
+                setLoading(true);
+                setLoadError(null);
+                fetch('/api/bookings?mine=true')
+                  .then((r) => r.json())
+                  .then((body) => {
+                    if (body.success) setBookings(body.data);
+                    else setLoadError(body.error || 'Failed to load your bookings.');
+                  })
+                  .catch(() => setLoadError('Network error while loading your bookings.'))
+                  .finally(() => setLoading(false));
+              }}
+              className="rounded-lg border border-outline bg-surface-container px-6 py-2 text-label-md text-primary transition-colors hover:bg-surface-container-high"
             >
-              Book a room
+              Retry
             </button>
           </div>
-        ) : (
-          <div className="space-y-8">
-            <section>
-              <h3 className="mb-3 text-sm font-medium text-zinc-500 uppercase tracking-wide">
-                Upcoming ({upcoming.length})
+        ) : bookings.length === 0 ? (
+          <EmptyState onBrowse={() => router.push('/schedule')} />
+        ) : visible.length === 0 ? (
+          <div className="min-h-[320px] rounded-xl border border-dashed border-outline-variant bg-surface p-10">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-low text-primary-container">
+                <Icon name="event_busy" size={32} />
+              </div>
+              <h3 className="text-headline-md text-on-surface">
+                No {tab === 'upcoming' ? 'upcoming' : 'past'} reservations
               </h3>
-              <Table
-                bookings={upcoming}
-                onCancel={handleCancel}
-              />
-            </section>
-
-            <section>
-              <h3 className="mb-3 text-sm font-medium text-zinc-500 uppercase tracking-wide">
-                Past ({past.length})
-              </h3>
-              <Table
-                bookings={past}
-                onCancel={handleCancel}
-                readonly
-              />
-            </section>
+              <p className="max-w-xs text-body-md text-on-surface-variant">
+                Your booking history is currently empty for the selected filter.
+              </p>
+              {tab === 'upcoming' && (
+                <button
+                  type="button"
+                  onClick={() => router.push('/schedule')}
+                  className="rounded-lg border border-outline bg-surface-container px-6 py-2 text-label-md text-primary transition-colors hover:bg-surface-container-high"
+                >
+                  Browse Available Slots
+                </button>
+              )}
+            </div>
           </div>
+        ) : (
+          <Table bookings={visible} tab={tab} onCancel={handleCancel} />
         )}
-      </main>
+      </div>
 
       <CancelBookingModal
         open={cancelOpen}
@@ -128,131 +197,106 @@ export default function MyBookingsPage() {
         }}
         onSuccess={refreshBookings}
       />
+    </AppShell>
+  );
+}
+
+function EmptyState({ onBrowse }: { onBrowse: () => void }) {
+  return (
+    <div className="min-h-[320px] rounded-xl border border-dashed border-outline-variant bg-surface p-10">
+      <div className="flex flex-col items-center justify-center space-y-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-low text-primary-container">
+          <Icon name="event_available" size={32} />
+        </div>
+        <h3 className="text-headline-md text-on-surface">No reservations yet</h3>
+        <p className="max-w-xs text-body-md text-on-surface-variant">
+          Book a room to get started with your first reservation.
+        </p>
+        <button
+          type="button"
+          onClick={onBrowse}
+          className="rounded-lg border border-outline bg-surface-container px-6 py-2 text-label-md text-primary transition-colors hover:bg-surface-container-high"
+        >
+          Browse Available Slots
+        </button>
+      </div>
     </div>
   );
 }
 
-function BookingCard({ booking, onCancel, readonly }: {
-  booking: BookingData;
-  onCancel: (b: BookingData) => void;
-  readonly?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-zinc-800">{booking.room.name}</span>
-          {booking.recurringSeriesId ? (
-            <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-              Recurring
-            </span>
-          ) : (
-            <span className="shrink-0 text-[11px] text-zinc-400">One-off</span>
-          )}
-        </div>
-        <div className="mt-0.5 text-xs text-zinc-500">
-          {new Date(booking.startTime).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-          })}{' '}
-          {new Date(booking.startTime).toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-          {' - '}
-          {new Date(booking.endTime).toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </div>
-      </div>
-      {!readonly && (
-        <button
-          type="button"
-          onClick={() => onCancel(booking)}
-          className="ml-3 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-        >
-          Cancel
-        </button>
-      )}
-    </div>
-  );
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function Table({
   bookings,
+  tab,
   onCancel,
-  readonly,
 }: {
   bookings: BookingData[];
+  tab: Tab;
   onCancel: (b: BookingData) => void;
-  readonly?: boolean;
 }) {
-  if (bookings.length === 0) {
-    return <p className="py-6 text-sm text-zinc-400">None</p>;
-  }
+  const readonly = tab === 'past';
 
   return (
-    <>
-      <div className="space-y-2 md:hidden">
-        {bookings.map((b) => (
-          <BookingCard key={b.id} booking={b} onCancel={onCancel} readonly={readonly} />
-        ))}
-      </div>
-      <div className="hidden md:block overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-        <table className="w-full text-sm">
+    <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500">
-              <th className="px-4 py-3">Room</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Time</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3" />
+            <tr className="border-b border-outline-variant bg-surface-container-low">
+              <th className="px-6 py-4 text-label-md text-on-surface-variant">Room</th>
+              <th className="px-6 py-4 text-label-md text-on-surface-variant">Type</th>
+              <th className="px-6 py-4 text-label-md text-on-surface-variant">Date &amp; Time</th>
+              <th className="px-6 py-4 text-center text-label-md text-on-surface-variant">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-outline-variant">
             {bookings.map((b) => (
-              <tr key={b.id} className="border-b border-zinc-100 last:border-0">
-                <td className="px-4 py-3 font-medium text-zinc-800">{b.room.name}</td>
-                <td className="px-4 py-3 text-zinc-600">
-                  {new Date(b.startTime).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+              <tr key={b.id} className="group transition-colors hover:bg-surface-variant/30">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <Icon name="meeting_room" size={18} className="text-primary" />
+                    <span className="font-medium text-on-surface">{b.room.name}</span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-zinc-600">
-                  {new Date(b.startTime).toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}{' '}
-                  -{' '}
-                  {new Date(b.endTime).toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td className="px-4 py-3">
+                <td className="px-6 py-4">
                   {b.recurringSeriesId ? (
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
-                      Recurring
+                    <span className="rounded bg-tertiary/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-tertiary">
+                      Weekly
                     </span>
                   ) : (
-                    <span className="text-zinc-400">One-off</span>
+                    <span className="text-label-sm text-on-surface-variant">One-off</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-on-surface">{formatDate(b.startTime)}</span>
+                    <span className="text-label-sm text-on-surface-variant">
+                      {formatTime(b.startTime)} - {formatTime(b.endTime)}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-center">
                   {!readonly && (
                     <button
                       type="button"
                       onClick={() => onCancel(b)}
-                      className={clsx(
-                        'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                        'text-red-600 hover:bg-red-50',
-                      )}
+                      title="Cancel Reservation"
+                      className="rounded-full p-2 text-error opacity-60 transition-all hover:bg-error-container/20 hover:opacity-100"
                     >
-                      Cancel
+                      <Icon name="cancel" size={20} />
                     </button>
                   )}
                 </td>
@@ -261,6 +305,6 @@ function Table({
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

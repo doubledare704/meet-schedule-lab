@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 
 interface BookingData {
   id: string;
@@ -61,72 +62,90 @@ export function CancelBookingModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Cancel Booking">
-      <div className="space-y-4">
+    <Modal open={open} onClose={onClose} title="Cancel Booking?">
+      <div className="space-y-4 p-6">
         {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
-            {error}
+          <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-on-surface">
+            <Icon name="error" size={18} className="text-error" />
+            <span>{error}</span>
           </div>
         )}
 
-        {booking && (
-          <p className="text-sm text-zinc-600">
-            Cancel booking at <strong>{booking.room.name}</strong> on{' '}
-            {new Date(booking.startTime).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-            })}{' '}
-            {new Date(booking.startTime).toLocaleTimeString('en-GB', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-            ?
-          </p>
-        )}
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-error-container">
+            <Icon name="warning" size={32} className="text-error" filled />
+          </div>
+          {booking && (
+            <p className="text-body-md text-on-surface-variant">
+              Are you sure you want to cancel your booking at{' '}
+              <span className="font-bold text-on-surface">{booking.room.name}</span> on{' '}
+              <span className="font-bold text-on-surface">
+                {new Date(booking.startTime).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}{' '}
+                {new Date(booking.startTime).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          )}
+        </div>
 
         {isRecurring && (
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-sm font-medium text-zinc-700">This is a recurring booking</p>
-            <label className="flex items-center gap-2 text-sm text-zinc-600">
+          <div className="space-y-2 rounded-lg border border-outline-variant bg-surface-container-low p-4">
+            <p className="text-label-md font-medium text-on-surface">
+              This is a recurring booking
+            </p>
+            <label className="flex items-center gap-2 text-body-sm text-on-surface-variant">
               <input
                 type="radio"
                 name="cancelScope"
                 value="this"
                 checked={scope === 'this'}
                 onChange={() => setScope('this')}
-                className="text-zinc-900"
+                className="accent-primary"
               />
               Only this instance
             </label>
-            <label className="flex items-center gap-2 text-sm text-zinc-600">
+            <label className="flex items-center gap-2 text-body-sm text-on-surface-variant">
               <input
                 type="radio"
                 name="cancelScope"
                 value="future"
                 checked={scope === 'future'}
                 onChange={() => setScope('future')}
-                className="text-zinc-900"
+                className="accent-primary"
               />
               This and all future instances
             </label>
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Keep Booking
-          </Button>
+        <div className="flex flex-col gap-3 pt-2">
           <Button
             type="button"
             variant="danger"
             loading={loading}
             onClick={handleConfirm}
+            className="w-full py-3 shadow-lg shadow-error/20"
           >
-            {scope === 'future' ? 'Cancel Series' : 'Cancel Booking'}
+            {scope === 'future' ? 'Yes, Cancel Series' : 'Yes, Cancel'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="w-full py-3"
+          >
+            Keep Booking
           </Button>
         </div>
       </div>
+      <div className="h-1 bg-gradient-to-r from-error/40 via-error to-error/40" />
     </Modal>
   );
 }
