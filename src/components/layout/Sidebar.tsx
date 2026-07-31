@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
 
 interface NavItem {
-  href?: string;
+  href: string;
   label: string;
   icon: string;
 }
@@ -14,9 +14,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/schedule', label: 'Schedule', icon: 'calendar_month' },
   { href: '/my-bookings', label: 'My Bookings', icon: 'event_available' },
-  { label: 'Rooms', icon: 'meeting_room' },
-  { label: 'Analytics', icon: 'analytics' },
-  { label: 'Team', icon: 'group' },
 ];
 
 interface SidebarProps {
@@ -35,51 +32,42 @@ export function Sidebar({ onBookRoomClick }: SidebarProps) {
 
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          const active = item.href ? pathname === item.href : false;
-          const inner = (
-            <>
-              <Icon name={item.icon} size={20} />
-              <span className="text-label-md">{item.label}</span>
-            </>
-          );
+          const active = pathname === item.href;
           const className = clsx(
             'flex items-center gap-4 rounded-lg px-4 py-2 transition-all active:scale-95',
             active
               ? 'border-l-4 border-primary bg-secondary-container text-on-secondary-container'
               : 'text-on-surface-variant hover:bg-surface-container-high',
           );
-          return item.href ? (
+          return (
             <Link key={item.label} href={item.href} className={className}>
-              {inner}
+              <Icon name={item.icon} size={20} />
+              <span className="text-label-md">{item.label}</span>
             </Link>
-          ) : (
-            <button key={item.label} type="button" className={className} disabled>
-              {inner}
-            </button>
           );
         })}
-      </nav>
 
-      <div className="px-4 pt-6">
-        {onBookRoomClick ? (
-          <button
-            type="button"
-            onClick={onBookRoomClick}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-label-md text-on-primary transition-opacity hover:opacity-90"
-          >
-            <Icon name="add" size={18} />
-            Book Room
-          </button>
-        ) : (
-          <Link
-            href="/schedule?action=new"
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-label-md text-on-primary transition-opacity hover:opacity-90"
-          >
-            <Icon name="add" size={18} />
-            Book Room
-          </Link>
-        )}
-      </div>
+        <div className="mt-1">
+          {onBookRoomClick ? (
+            <button
+              type="button"
+              onClick={onBookRoomClick}
+              className="flex w-full items-center gap-4 rounded-lg bg-primary px-4 py-2 text-on-primary shadow-md transition-opacity hover:opacity-90 active:scale-95"
+            >
+              <Icon name="add" size={20} />
+              <span className="text-label-md">Book Room</span>
+            </button>
+          ) : (
+            <Link
+              href="/schedule?action=new"
+              className="flex w-full items-center gap-4 rounded-lg bg-primary px-4 py-2 text-on-primary shadow-md transition-opacity hover:opacity-90 active:scale-95"
+            >
+              <Icon name="add" size={20} />
+              <span className="text-label-md">Book Room</span>
+            </Link>
+          )}
+        </div>
+      </nav>
     </aside>
   );
 }

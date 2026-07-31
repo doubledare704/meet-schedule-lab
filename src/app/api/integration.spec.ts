@@ -7,8 +7,6 @@ import { GET as getRooms } from './rooms/route';
 import {
   TEST_USER,
   TEST_ROOM_ID,
-  TEST_ROOM,
-  TEST_ROOM_2,
   seedTestData,
   cleanupTestData,
 } from '@/test-utils/integration';
@@ -96,7 +94,7 @@ describe('POST /api/bookings', () => {
     const res = await createBooking(makeRequest('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId: TEST_ROOM_ID, startTime: start.toISOString(), endTime: end.toISOString() }),
+      body: JSON.stringify({ roomId: TEST_ROOM_ID, title: 'Test booking', startTime: start.toISOString(), endTime: end.toISOString() }),
     }));
     const body = await res.json();
     expect(res.status).toBe(201);
@@ -119,7 +117,7 @@ describe('POST /api/bookings', () => {
     const res = await createBooking(makeRequest('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId: TEST_ROOM_ID, startTime: new Date('2020-01-01').toISOString(), endTime: new Date('2020-01-01T01:00:00').toISOString() }),
+      body: JSON.stringify({ roomId: TEST_ROOM_ID, title: 'Test booking', startTime: new Date('2020-01-01').toISOString(), endTime: new Date('2020-01-01T01:00:00').toISOString() }),
     }));
     expect(res.status).toBe(409);
   });
@@ -133,7 +131,7 @@ describe('POST /api/bookings', () => {
     const res = await createBooking(makeRequest('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId: TEST_ROOM_ID, startTime: start.toISOString(), endTime: end.toISOString() }),
+      body: JSON.stringify({ roomId: TEST_ROOM_ID, title: 'Test booking', startTime: start.toISOString(), endTime: end.toISOString() }),
     }));
     expect(res.status).toBe(409);
     await db.booking.delete({ where: { id: existing.id } });
@@ -164,6 +162,7 @@ describe('POST /api/bookings/recurring', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId: TEST_ROOM_ID,
+        title: 'Weekly sync',
         dayOfWeek: startDate.getUTCDay(),
         startTime: '10:00',
         endTime: '11:00',
@@ -188,6 +187,7 @@ describe('POST /api/bookings/recurring', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId: TEST_ROOM_ID,
+        title: 'Weekly sync',
         dayOfWeek: startDate.getUTCDay(),
         startTime: '10:00',
         endTime: '11:00',
@@ -213,7 +213,7 @@ describe('concurrency', () => {
       const res = await createBooking(makeRequest('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: TEST_ROOM_ID, startTime: start.toISOString(), endTime: end.toISOString() }),
+        body: JSON.stringify({ roomId: TEST_ROOM_ID, title: 'Test booking', startTime: start.toISOString(), endTime: end.toISOString() }),
       }));
       return res;
     };

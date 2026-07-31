@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { getSession } from '@/lib/auth';
-import { createBooking, findConflictingBookings } from '@/services/booking.service';
+import { createBooking } from '@/services/booking.service';
 
 const createBookingSchema = z.object({
   roomId: z.string().min(1, 'Room ID is required'),
+  title: z.string().trim().min(1, 'Booking title is required').max(100, 'Booking title must be at most 100 characters'),
   startTime: z.string().datetime({ message: 'Invalid start time format' }),
   endTime: z.string().datetime({ message: 'Invalid end time format' }),
 });
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
   const result = await createBooking({
     roomId: parsed.data.roomId,
     userId: user.id,
+    title: parsed.data.title,
     startTime,
     endTime,
   });

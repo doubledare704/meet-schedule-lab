@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { RoomFilterBar } from '@/components/schedule/RoomFilterBar';
-import { ScheduleGrid } from '@/components/schedule/ScheduleGrid';
+import { ScheduleGrid, getWeekOffsetForDate } from '@/components/schedule/ScheduleGrid';
 import { BookingModal } from '@/components/schedule/BookingModal';
 
 interface UserData {
@@ -44,12 +44,19 @@ export default function SchedulePage() {
   const [prefilledEnd, setPrefilledEnd] = useState('');
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('roomId');
+    const dateParam = params.get('date');
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((body) => {
         if (!body.success) {
           router.push('/login');
           return;
+        }
+        if (roomParam) setSelectedRoomId(roomParam);
+        if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+          setWeekOffset(getWeekOffsetForDate(dateParam));
         }
         setUser(body.data.user);
       })

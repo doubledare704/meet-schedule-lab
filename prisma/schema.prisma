@@ -66,6 +66,7 @@ model Booking {
   recurringSeriesId String?
   recurringSeries   RecurringSeries? @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
 
+  title             String           @default("")
   startTime         DateTime
   endTime           DateTime
 

@@ -31,9 +31,6 @@ export function Header({ userName, source }: HeaderProps) {
         <div className="flex items-center gap-2">
           <NotificationBell source={source} />
           <ThemeToggle />
-          <span className="material-symbols-outlined hidden rounded-full p-2 text-on-surface-variant sm:inline-block">
-            settings
-          </span>
           <div className="ml-1 flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary bg-surface-container-high text-label-md font-medium text-on-surface">
               {userName.charAt(0).toUpperCase()}

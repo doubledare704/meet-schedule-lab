@@ -60,6 +60,7 @@ export function BookingModal({
   prefilledEnd,
 }: BookingModalProps) {
   const [roomId, setRoomId] = useState(prefilledRoomId ?? rooms[0]?.id ?? '');
+  const [title, setTitle] = useState('');
   const [date, setDate] = useState(formatISOToDate(prefilledStart));
   const [startTime, setStartTime] = useState(formatISOToTime(prefilledStart));
   const [endTime, setEndTime] = useState(formatISOToTime(prefilledEnd));
@@ -85,6 +86,12 @@ export function BookingModal({
 
     if (!roomId) {
       setError('Please select a room');
+      return;
+    }
+
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length < 1 || trimmedTitle.length > 100) {
+      setError('Booking title is required and must be at most 100 characters');
       return;
     }
 
@@ -115,6 +122,7 @@ export function BookingModal({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             roomId,
+            title: trimmedTitle,
             dayOfWeek: getDayOfWeek(),
             startTime,
             endTime,
@@ -140,6 +148,7 @@ export function BookingModal({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             roomId,
+            title: trimmedTitle,
             startTime: startISO,
             endTime: endISO,
           }),
@@ -211,6 +220,27 @@ export function BookingModal({
             <span>{error}</span>
           </div>
         )}
+
+        <div className="space-y-1">
+          <label className="text-label-md text-on-surface-variant" htmlFor="booking-title">
+            Title
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-outline">
+              <Icon name="edit" size={20} />
+            </span>
+            <input
+              id="booking-title"
+              type="text"
+              required
+              maxLength={100}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Weekly team standup"
+              className={fieldClass}
+            />
+          </div>
+        </div>
 
         <div className="space-y-1">
           <label className="text-label-md text-on-surface-variant" htmlFor="booking-room">

@@ -19,6 +19,8 @@ interface BookingBlockProps {
   currentUserId: string;
   roomColor: string;
   isAllRooms: boolean;
+  leftPct?: number;
+  widthPct?: number;
   onClick: (booking: BookingData) => void;
   children?: React.ReactNode;
 }
@@ -36,6 +38,8 @@ export function BookingBlock({
   currentUserId,
   roomColor,
   isAllRooms,
+  leftPct,
+  widthPct,
   onClick,
   children,
 }: BookingBlockProps) {
@@ -66,7 +70,8 @@ export function BookingBlock({
         }
       }}
       className={clsx(
-        'pointer-events-auto absolute left-0.5 right-0.5 z-10 flex cursor-pointer text-left text-label-sm leading-tight shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary',
+        'pointer-events-auto absolute z-10 flex cursor-pointer text-left text-label-sm leading-tight shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary',
+        leftPct === undefined && 'left-0.5 right-0.5',
         isShort ? 'flex-row items-center justify-between px-2 py-0.5 text-[11px]' : 'flex-col justify-between overflow-visible rounded-lg px-2 py-1.5',
         isOwn
           ? 'bg-primary text-on-primary shadow-md'
@@ -75,6 +80,8 @@ export function BookingBlock({
       style={{
         top: `${topPct}%`,
         height: `${Math.max(heightPct, 4)}%`,
+        left: leftPct !== undefined ? `${leftPct}%` : undefined,
+        width: widthPct !== undefined ? `${widthPct}%` : undefined,
         borderLeft: isAllRooms ? `3px solid ${roomColor}` : undefined,
       }}
     >

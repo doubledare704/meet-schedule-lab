@@ -69,12 +69,32 @@ async function main() {
     data: {
       roomId: rooms[0].id,
       userId: user1.id,
+      title: 'Kickoff meeting',
       startTime: tomorrow,
       endTime: tomorrowEnd,
     },
   });
 
   console.log('Seeded demo booking for tomorrow (10:00 - 11:30).');
+
+  const sarahStart = new Date();
+  sarahStart.setDate(sarahStart.getDate() + 1);
+  sarahStart.setHours(12, 0, 0, 0);
+
+  const sarahEnd = new Date(sarahStart);
+  sarahEnd.setHours(13, 0, 0, 0);
+
+  await prisma.booking.create({
+    data: {
+      roomId: rooms[1].id,
+      userId: user2.id,
+      title: 'Product review',
+      startTime: sarahStart,
+      endTime: sarahEnd,
+    },
+  });
+
+  console.log('Seeded demo booking for tomorrow (12:00 - 13:00).');
   console.log('Seeding completed successfully!');
 }
 

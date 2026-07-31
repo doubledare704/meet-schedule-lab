@@ -6,6 +6,7 @@ import { createRecurringSeries } from '@/services/booking.service';
 
 const createRecurringSchema = z.object({
   roomId: z.string().min(1, 'Room ID is required'),
+  title: z.string().trim().min(1, 'Booking title is required').max(100, 'Booking title must be at most 100 characters'),
   dayOfWeek: z.number().int().min(0).max(6),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Start time must be in HH:MM format'),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, 'End time must be in HH:MM format'),
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
   const result = await createRecurringSeries({
     roomId: parsed.data.roomId,
     userId: user.id,
+    title: parsed.data.title,
     dayOfWeek: parsed.data.dayOfWeek,
     startTime: parsed.data.startTime,
     endTime: parsed.data.endTime,

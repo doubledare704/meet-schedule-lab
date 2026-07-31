@@ -4,11 +4,11 @@ import { getKyivDayStart } from '@/utils/timezone';
 import type { Booking, RecurringSeries } from '@prisma/client';
 
 const MAX_RECURRING_INSTANCES = 52;
-const TZ = 'Europe/Kyiv';
 
 export async function createBooking(input: {
   roomId: string;
   userId: string;
+  title: string;
   startTime: Date;
   endTime: Date;
 }): Promise<{ success: true; booking: Booking } | { success: false; error: string }> {
@@ -19,6 +19,11 @@ export async function createBooking(input: {
 
   if (!validation.isValid) {
     return { success: false, error: validation.error ?? 'Invalid booking' };
+  }
+
+  const title = input.title.trim();
+  if (title.length < 1 || title.length > 100) {
+    return { success: false, error: 'Booking title must be between 1 and 100 characters' };
   }
 
   try {
@@ -51,6 +56,7 @@ export async function createBooking(input: {
         data: {
           roomId: input.roomId,
           userId: input.userId,
+          title,
           startTime: input.startTime,
           endTime: input.endTime,
         },
@@ -182,6 +188,7 @@ export async function cancelFutureInSeries(
 export async function createRecurringSeries(input: {
   roomId: string;
   userId: string;
+  title: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -220,6 +227,11 @@ export async function createRecurringSeries(input: {
   maxUntil.setFullYear(maxUntil.getFullYear() + 1);
   if (input.untilDate > maxUntil) {
     return { success: false, error: 'Recurring series cannot exceed 1 year' };
+  }
+
+  const title = input.title.trim();
+  if (title.length < 1 || title.length > 100) {
+    return { success: false, error: 'Booking title must be between 1 and 100 characters' };
   }
 
   try {
@@ -277,6 +289,7 @@ export async function createRecurringSeries(input: {
             data: {
               roomId: input.roomId,
               userId: input.userId,
+              title,
               startTime: startUTC,
               endTime: endUTC,
               recurringSeriesId: series.id,

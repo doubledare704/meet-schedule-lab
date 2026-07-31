@@ -17,6 +17,7 @@ describe('BookingService', () => {
       const result = createBooking({
         roomId: 'room-id',
         userId: 'user-id',
+        title: 'Team meeting',
         startTime: new Date(),
         endTime: new Date(),
       });
@@ -80,6 +81,7 @@ describe('BookingService', () => {
       const result = createRecurringSeries({
         roomId: 'room-id',
         userId: 'user-id',
+        title: 'Weekly sync',
         dayOfWeek: 1,
         startTime: '09:00',
         endTime: '10:00',
@@ -93,6 +95,7 @@ describe('BookingService', () => {
       const result = await createRecurringSeries({
         roomId: 'room-id',
         userId: 'user-id',
+        title: 'Weekly sync',
         dayOfWeek: 1,
         startTime: '09:00',
         endTime: '10:00',

@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect, Fragment } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { getWallClockTime, getKyivDateParts, getKyivDayStart } from '@/utils/timezone';
 import { BookingBlock } from './BookingBlock';
 import { BookingPopover } from './BookingPopover';
@@ -63,6 +65,22 @@ function getWeekDays(offset: number): DayInfo[] {
   return days;
 }
 
+export function getWeekOffsetForDate(dateStr: string): number {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) return 0;
+
+  const targetDayStart = getKyivDayStart(new Date(Date.UTC(year, month - 1, day)));
+  const targetParts = getKyivDateParts(targetDayStart);
+  const targetMonday = new Date(targetDayStart.getTime() - (targetParts.weekday === 0 ? 6 : targetParts.weekday - 1) * 86400000);
+
+  const now = new Date();
+  const todayStart = getKyivDayStart(now);
+  const nowParts = getKyivDateParts(now);
+  const nowMonday = new Date(todayStart.getTime() - (nowParts.weekday === 0 ? 6 : nowParts.weekday - 1) * 86400000);
+
+  return Math.round((targetMonday.getTime() - nowMonday.getTime()) / (7 * 86400000));
+}
+
 function isToday(day: DayInfo): boolean {
   const now = new Date();
   const todayParts = getKyivDateParts(now);
@@ -76,6 +94,51 @@ function isWeekend(day: DayInfo): boolean {
 function getRoomColor(roomId: string, rooms: RoomData[]): string {
   const idx = rooms.findIndex((r) => r.id === roomId);
   return ROOM_COLORS[idx >= 0 ? idx % ROOM_COLORS.length : 0];
+}
+
+interface PlacedBooking {
+  booking: BookingData;
+  leftPct: number;
+  widthPct: number;
+}
+
+function layoutDayBookings(bookings: BookingData[]): PlacedBooking[] {
+  if (bookings.length === 0) return [];
+
+  const toMinutes = (iso: string): number => {
+    const wall = getWallClockTime(new Date(iso), TZ);
+    return wall.hours * 60 + wall.minutes;
+  };
+
+  const sorted = [...bookings].sort((a, b) => {
+    const startDiff = toMinutes(a.startTime) - toMinutes(b.startTime);
+    if (startDiff !== 0) return startDiff;
+    return toMinutes(b.endTime) - toMinutes(a.endTime);
+  });
+
+  const columnEnds: number[] = [];
+  const placed: PlacedBooking[] = [];
+
+  for (const booking of sorted) {
+    const start = toMinutes(booking.startTime);
+    const end = toMinutes(booking.endTime);
+
+    let column = columnEnds.findIndex((columnEnd) => columnEnd <= start);
+    if (column === -1) {
+      column = columnEnds.length;
+      columnEnds.push(0);
+    }
+    columnEnds[column] = Math.max(columnEnds[column], end);
+
+    const totalColumns = columnEnds.length;
+    placed.push({
+      booking,
+      leftPct: (column / totalColumns) * 100,
+      widthPct: 100 / totalColumns,
+    });
+  }
+
+  return placed;
 }
 
 function formatDateKey(day: DayInfo): string {
@@ -99,6 +162,7 @@ export function ScheduleGrid({
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
   const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
   const [mobileDayIdx, setMobileDayIdx] = useState<number>(-1);
+  const [pastSlotStart, setPastSlotStart] = useState<string | null>(null);
 
   useEffect(() => {
     function updateTime() {
@@ -137,6 +201,14 @@ export function ScheduleGrid({
     return map;
   }, [filteredBookings]);
 
+  const placedBookingsByDay = useMemo(() => {
+    const map = new Map<string, PlacedBooking[]>();
+    for (const [key, list] of bookingsByDay) {
+      map.set(key, isAllRooms ? layoutDayBookings(list) : list.map((b) => ({ booking: b, leftPct: 0, widthPct: 100 })));
+    }
+    return map;
+  }, [bookingsByDay, isAllRooms]);
+
   function handleBookingClick(booking: BookingData) {
     setSelectedBooking((prev) => (prev?.id === booking.id ? null : booking));
   }
@@ -145,7 +217,22 @@ export function ScheduleGrid({
     const roomId = isAllRooms ? rooms[0]?.id ?? '' : selectedRoomId!;
     if (!roomId) return;
     const startUtc = new Date(day.date.getTime() + hour * 3600000 + minute * 60000);
+    if (startUtc.getTime() <= new Date().getTime()) {
+      setPastSlotStart(startUtc.toISOString());
+      return;
+    }
     onSlotClick(roomId, startUtc.toISOString(), new Date(startUtc.getTime() + 30 * 60000).toISOString());
+  }
+
+  function formatPastSlotLabel(iso: string): string {
+    return new Date(iso).toLocaleString('en-US', {
+      timeZone: TZ,
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   const weekLabel = `Week of ${days[0].date.toLocaleDateString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', year: 'numeric' })}`;
@@ -292,7 +379,7 @@ export function ScheduleGrid({
 
           {days.map((day, dayIdx) => {
             const dayKey = formatDateKey(day);
-            const dayBookings = bookingsByDay.get(dayKey) ?? [];
+            const placedBookings = placedBookingsByDay.get(dayKey) ?? [];
             return (
               <div
                 key={`overlay-${dayIdx}`}
@@ -305,13 +392,15 @@ export function ScheduleGrid({
                     style={{ top: `${currentTimePos}%` }}
                   />
                 )}
-                {dayBookings.map((booking) => (
+                {placedBookings.map(({ booking, leftPct, widthPct }) => (
                   <BookingBlock
                     key={booking.id}
                     booking={booking}
                     currentUserId={currentUserId}
                     roomColor={getRoomColor(booking.roomId, rooms)}
                     isAllRooms={isAllRooms}
+                    leftPct={leftPct}
+                    widthPct={widthPct}
                     onClick={handleBookingClick}
                   >
                     {selectedBooking?.id === booking.id && (
@@ -327,6 +416,33 @@ export function ScheduleGrid({
           })}
         </div>
       </div>
+
+      <Modal
+        open={pastSlotStart !== null}
+        onClose={() => setPastSlotStart(null)}
+        title="Time Slot Unavailable"
+      >
+        <div className="space-y-4 p-6">
+          <div className="flex items-start gap-3 rounded-lg border border-error/30 bg-error-container/40 px-4 py-3">
+            <Icon name="event_busy" size={20} className="mt-0.5 shrink-0 text-error" />
+            <div>
+              <p className="text-body-sm text-on-surface">
+                {pastSlotStart
+                  ? `${formatPastSlotLabel(pastSlotStart)} is in the past and can no longer be booked.`
+                  : 'This time slot is in the past and can no longer be booked.'}
+              </p>
+              <p className="mt-1 text-label-sm text-on-surface-variant">
+                Please select a future time slot.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setPastSlotStart(null)}>
+              Got it
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

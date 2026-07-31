@@ -15,6 +15,7 @@ interface UserData {
 
 interface BookingData {
   id: string;
+  title: string;
   startTime: string;
   endTime: string;
   recurringSeriesId: string | null;
@@ -34,6 +35,7 @@ export default function MyBookingsPage() {
   const [tab, setTab] = useState<Tab>('upcoming');
   const [cancelTarget, setCancelTarget] = useState<BookingData | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [pastPage, setPastPage] = useState(0);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -87,9 +89,25 @@ export default function MyBookingsPage() {
   }
 
   const now = new Date();
-  const upcoming = bookings.filter((b) => new Date(b.startTime) > now);
-  const past = bookings.filter((b) => new Date(b.startTime) <= now);
-  const visible = tab === 'upcoming' ? upcoming : past;
+  const upcoming = bookings
+    .filter((b) => new Date(b.startTime) > now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const past = bookings
+    .filter((b) => new Date(b.startTime) <= now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+  const PAST_PAGE_SIZE = 5;
+  const pastPageCount = Math.max(1, Math.ceil(past.length / PAST_PAGE_SIZE));
+  const safePastPage = Math.min(pastPage, pastPageCount - 1);
+  const visible =
+    tab === 'upcoming'
+      ? upcoming
+      : past.slice(safePastPage * PAST_PAGE_SIZE, (safePastPage + 1) * PAST_PAGE_SIZE);
+
+  function handleOpenRoomSchedule(booking: BookingData) {
+    const dateKey = new Date(booking.startTime).toLocaleDateString('en-CA', { timeZone: TZ });
+    router.push(`/schedule?roomId=${encodeURIComponent(booking.room.id)}&date=${dateKey}`);
+  }
 
   if (!authChecked || (!user && loading)) {
     return (
@@ -119,7 +137,10 @@ export default function MyBookingsPage() {
               <button
                 key={t}
                 type="button"
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  setTab(t);
+                  setPastPage(0);
+                }}
                 className={clsx(
                   'rounded-md px-6 py-2 text-label-md transition-all',
                   tab === t
@@ -184,7 +205,17 @@ export default function MyBookingsPage() {
             </div>
           </div>
         ) : (
-          <Table bookings={visible} tab={tab} onCancel={handleCancel} />
+          <Table
+            bookings={visible}
+            tab={tab}
+            onCancel={handleCancel}
+            onRowClick={handleOpenRoomSchedule}
+            pagination={
+              tab === 'past' && past.length > PAST_PAGE_SIZE
+                ? { page: safePastPage, pageCount: pastPageCount, onPageChange: setPastPage }
+                : undefined
+            }
+          />
         )}
       </div>
 
@@ -224,8 +255,11 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
+const TZ = 'Europe/Kyiv';
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
+    timeZone: TZ,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -234,19 +268,30 @@ function formatDate(iso: string): string {
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', {
+    timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+interface Pagination {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
 }
 
 function Table({
   bookings,
   tab,
   onCancel,
+  onRowClick,
+  pagination,
 }: {
   bookings: BookingData[];
   tab: Tab;
   onCancel: (b: BookingData) => void;
+  onRowClick: (b: BookingData) => void;
+  pagination?: Pagination;
 }) {
   const readonly = tab === 'past';
 
@@ -256,29 +301,34 @@ function Table({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-outline-variant bg-surface-container-low">
+              <th className="px-6 py-4 text-label-md text-on-surface-variant">Title</th>
               <th className="px-6 py-4 text-label-md text-on-surface-variant">Room</th>
-              <th className="px-6 py-4 text-label-md text-on-surface-variant">Type</th>
               <th className="px-6 py-4 text-label-md text-on-surface-variant">Date &amp; Time</th>
               <th className="px-6 py-4 text-center text-label-md text-on-surface-variant">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant">
             {bookings.map((b) => (
-              <tr key={b.id} className="group transition-colors hover:bg-surface-variant/30">
+              <tr
+                key={b.id}
+                onClick={() => onRowClick(b)}
+                className="group cursor-pointer transition-colors hover:bg-surface-variant/30"
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Icon name="meeting_room" size={18} className="text-primary" />
-                    <span className="font-medium text-on-surface">{b.room.name}</span>
+                    <span className="font-medium text-on-surface">{b.title || 'Untitled'}</span>
+                    {b.recurringSeriesId && (
+                      <span className="rounded bg-tertiary/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-tertiary">
+                        Weekly
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  {b.recurringSeriesId ? (
-                    <span className="rounded bg-tertiary/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-tertiary">
-                      Weekly
-                    </span>
-                  ) : (
-                    <span className="text-label-sm text-on-surface-variant">One-off</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Icon name="meeting_room" size={18} className="text-primary" />
+                    <span className="text-on-surface">{b.room.name}</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
@@ -292,7 +342,10 @@ function Table({
                   {!readonly && (
                     <button
                       type="button"
-                      onClick={() => onCancel(b)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCancel(b);
+                      }}
                       title="Cancel Reservation"
                       className="rounded-full p-2 text-error opacity-60 transition-all hover:bg-error-container/20 hover:opacity-100"
                     >
@@ -305,6 +358,32 @@ function Table({
           </tbody>
         </table>
       </div>
+
+      {pagination && pagination.pageCount > 1 && (
+        <div className="flex items-center justify-between border-t border-outline-variant px-6 py-3">
+          <span className="text-label-sm text-on-surface-variant">
+            Page {pagination.page + 1} of {pagination.pageCount}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={pagination.page === 0}
+              onClick={() => pagination.onPageChange(pagination.page - 1)}
+              className="rounded-lg border border-outline px-3 py-1.5 text-label-sm text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={pagination.page === pagination.pageCount - 1}
+              onClick={() => pagination.onPageChange(pagination.page + 1)}
+              className="rounded-lg border border-outline px-3 py-1.5 text-label-sm text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
