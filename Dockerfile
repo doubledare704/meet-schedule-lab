@@ -1,10 +1,13 @@
+ARG DB_PLACEHOLDER="postgresql://postgres:postgres@postgres:5432/meetscheduledb?schema=public"
+
 FROM node:22-alpine AS deps
+ARG DB_PLACEHOLDER
 WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/meetscheduledb?schema=public"
+ENV DATABASE_URL=$DB_PLACEHOLDER
 RUN npm ci
 RUN npx prisma generate
 
@@ -19,6 +22,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:22-alpine AS runner
+ARG DB_PLACEHOLDER
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -34,7 +38,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 COPY package*.json ./
 
-RUN export DATABASE_URL="postgresql://postgres:postgres@postgres:5432/meetscheduledb?schema=public" && npm ci --omit=dev && npm install --no-save --include=dev prisma@7.9.1 tsx@4.19.0 && npx prisma generate && npm cache clean --force
+ENV DATABASE_URL=$DB_PLACEHOLDER
+RUN npm ci --omit=dev && npm install --no-save --include=dev prisma@7.9.1 tsx@4.19.0 && npx prisma generate && npm cache clean --force
 
 USER nextjs
 
