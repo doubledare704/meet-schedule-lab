@@ -3,8 +3,6 @@ services:
     image: postgres:18-alpine
     container_name: meet-schedule-db
     restart: always
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -26,6 +24,8 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
     ports:
       - '3000:3000'
     depends_on:

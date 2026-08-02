@@ -81,6 +81,12 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
+3. Seed the database (one-time) and view test credentials below:
+
+```bash
+docker compose exec app npm run seed
+```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
@@ -188,6 +194,7 @@ Start all services:
 
 ```bash
 docker compose up --build -d
+docker compose exec app npm run seed
 ```
 
 Start only PostgreSQL (for local development):
