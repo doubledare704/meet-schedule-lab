@@ -2,7 +2,12 @@
 
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
-import { getWallClockTime } from '@/utils/timezone';
+import {
+  getDayStart,
+  getOfficeWindow,
+  getWallClockTime,
+  officeRowIndexForLocalMinute,
+} from '@/utils/timezone';
 
 interface BookingData {
   id: string;
@@ -19,17 +24,16 @@ interface BookingBlockProps {
   currentUserId: string;
   roomColor: string;
   isAllRooms: boolean;
+  displayTz: string;
   leftPct?: number;
   widthPct?: number;
   onClick: (booking: BookingData) => void;
   children?: React.ReactNode;
 }
 
-const TZ = 'Europe/Kyiv';
-
-function formatTime(iso: string): string {
+function formatTime(iso: string, displayTz: string): string {
   const d = new Date(iso);
-  const wall = getWallClockTime(d, TZ);
+  const wall = getWallClockTime(d, displayTz);
   return `${String(wall.hours).padStart(2, '0')}:${String(wall.minutes).padStart(2, '0')}`;
 }
 
@@ -38,6 +42,7 @@ export function BookingBlock({
   currentUserId,
   roomColor,
   isAllRooms,
+  displayTz,
   leftPct,
   widthPct,
   onClick,
@@ -45,17 +50,17 @@ export function BookingBlock({
 }: BookingBlockProps) {
   const start = new Date(booking.startTime);
   const end = new Date(booking.endTime);
-  const startWall = getWallClockTime(start, TZ);
-  const endWall = getWallClockTime(end, TZ);
+  const rows = getOfficeWindow(getDayStart(start, displayTz), displayTz);
 
-  const startMin = startWall.hours * 60 + startWall.minutes;
-  const endMin = endWall.hours * 60 + endWall.minutes;
-  const durationMin = endMin - startMin;
-  const dayStartMin = 540;
+  const toRowIndex = (date: Date): number => {
+    const wall = getWallClockTime(date, displayTz);
+    return officeRowIndexForLocalMinute(wall.hours * 60 + wall.minutes, rows);
+  };
 
-  const topPct = ((startMin - dayStartMin) / 600) * 100;
-  const heightPct = (durationMin / 600) * 100;
-  const isShort = durationMin <= 30;
+  const startRow = Math.max(0, toRowIndex(start));
+  const endRow = Math.max(startRow + 1, toRowIndex(end));
+  const durationRows = endRow - startRow;
+  const isShort = durationRows <= 1;
   const isOwn = booking.user.id === currentUserId;
 
   return (
@@ -78,8 +83,8 @@ export function BookingBlock({
           : 'border border-outline bg-surface-container text-on-surface',
       )}
       style={{
-        top: `${topPct}%`,
-        height: `${Math.max(heightPct, 4)}%`,
+        top: `${(startRow / rows.length) * 100}%`,
+        height: `${Math.max((durationRows / rows.length) * 100, 4)}%`,
         left: leftPct !== undefined ? `${leftPct}%` : undefined,
         width: widthPct !== undefined ? `${widthPct}%` : undefined,
         borderLeft: isAllRooms ? `3px solid ${roomColor}` : undefined,
@@ -91,7 +96,7 @@ export function BookingBlock({
             {isAllRooms ? booking.room.name : isOwn ? 'Reserved' : booking.user.name}
           </span>
           <span className="ml-1 shrink-0 text-[10px] opacity-90">
-            {formatTime(booking.startTime)}-{formatTime(booking.endTime)}
+            {formatTime(booking.startTime, displayTz)}-{formatTime(booking.endTime, displayTz)}
           </span>
         </>
       ) : (
@@ -104,7 +109,7 @@ export function BookingBlock({
           <div className="flex items-center gap-0.5">
             <Icon name="schedule" size={12} />
             <span className="truncate">
-              {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+              {formatTime(booking.startTime, displayTz)} - {formatTime(booking.endTime, displayTz)}
             </span>
             {isAllRooms && !isOwn && (
               <span className="ml-auto truncate opacity-80">{booking.user.name}</span>

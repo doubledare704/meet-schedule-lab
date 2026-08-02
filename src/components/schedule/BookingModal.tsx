@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { getWallClockTime, getKyivDayStart } from '@/utils/timezone';
-
-const TZ = 'Europe/Kyiv';
+import {
+  getDateParts,
+  getDayStartForCalendarDate,
+  getOfficeTimezone,
+  getOfficeWindow,
+  getWallClockTime,
+} from '@/utils/timezone';
 
 interface RoomData {
   id: string;
@@ -22,32 +26,42 @@ interface BookingModalProps {
   prefilledRoomId: string | null;
   prefilledStart: string;
   prefilledEnd: string;
+  displayTz: string;
 }
-
-const TIME_OPTIONS: string[] = [];
-for (let h = 9; h <= 18; h++) {
-  TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:00`);
-  TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:30`);
-}
-TIME_OPTIONS.push('19:00');
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function combineDateAndTime(dateStr: string, timeStr: string): string {
+function combineDateAndTime(dateStr: string, timeStr: string, displayTz: string): string {
   const [hours, minutes] = timeStr.split(':').map(Number);
-  const utcDate = new Date(dateStr + 'T00:00:00Z');
-  const kyivMidnight = getKyivDayStart(utcDate);
-  return new Date(kyivMidnight.getTime() + hours * 3600000 + minutes * 60000).toISOString();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (
+    !Number.isFinite(hours) || !Number.isFinite(minutes) ||
+    !Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)
+  ) {
+    return '';
+  }
+  const localMidnight = getDayStartForCalendarDate(year, month - 1, day, displayTz);
+  return new Date(localMidnight.getTime() + hours * 3600000 + minutes * 60000).toISOString();
 }
 
-function formatISOToDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ });
-}
-
-function formatISOToTime(iso: string): string {
+function formatISOToDate(iso: string, displayTz: string): string {
   const d = new Date(iso);
-  const wall = getWallClockTime(d, TZ);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-CA', { timeZone: displayTz });
+}
+
+function formatISOToTime(iso: string, displayTz: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const wall = getWallClockTime(d, displayTz);
   return `${String(wall.hours).padStart(2, '0')}:${String(wall.minutes).padStart(2, '0')}`;
+}
+
+function getLocalDayEnd(untilDate: string, displayTz: string): string {
+  const [year, month, day] = untilDate.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return '';
+  const localMidnight = getDayStartForCalendarDate(year, month - 1, day, displayTz);
+  return new Date(localMidnight.getTime() + 86400000 - 1).toISOString();
 }
 
 export function BookingModal({
@@ -58,12 +72,13 @@ export function BookingModal({
   prefilledRoomId,
   prefilledStart,
   prefilledEnd,
+  displayTz,
 }: BookingModalProps) {
   const [roomId, setRoomId] = useState(prefilledRoomId ?? rooms[0]?.id ?? '');
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(formatISOToDate(prefilledStart));
-  const [startTime, setStartTime] = useState(formatISOToTime(prefilledStart));
-  const [endTime, setEndTime] = useState(formatISOToTime(prefilledEnd));
+  const [date, setDate] = useState(formatISOToDate(prefilledStart, displayTz));
+  const [startTime, setStartTime] = useState(formatISOToTime(prefilledStart, displayTz));
+  const [endTime, setEndTime] = useState(formatISOToTime(prefilledEnd, displayTz));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recurring, setRecurring] = useState(false);
@@ -73,10 +88,20 @@ export function BookingModal({
     skippedCount: number;
   } | null>(null);
 
+  const timeOptions = useMemo(() => {
+    const [year, month, day] = date.split('-').map(Number);
+    if (!year || !month || !day) return [];
+    const dayStart = getDayStartForCalendarDate(year, month - 1, day, displayTz);
+    return getOfficeWindow(dayStart, displayTz).map((row) => row.label);
+  }, [date, displayTz]);
+
   function getDayOfWeek(): number {
-    const parsed = new Date(date + 'T00:00:00Z');
+    if (!date || !startTime) return 1;
+    const startISO = combineDateAndTime(date, startTime, displayTz);
+    if (!startISO) return 1;
+    const parsed = new Date(startISO);
     if (Number.isNaN(parsed.getTime())) return 1;
-    return parsed.getUTCDay();
+    return getDateParts(parsed, getOfficeTimezone()).weekday;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -95,8 +120,8 @@ export function BookingModal({
       return;
     }
 
-    const startISO = combineDateAndTime(date, startTime);
-    const endISO = combineDateAndTime(date, endTime);
+    const startISO = combineDateAndTime(date, startTime, displayTz);
+    const endISO = combineDateAndTime(date, endTime, displayTz);
 
     if (new Date(endISO) <= new Date(startISO)) {
       setError('End time must be after start time');
@@ -127,7 +152,7 @@ export function BookingModal({
             startTime,
             endTime,
             startDate: startISO,
-            untilDate: new Date(untilDate + 'T23:59:59Z').toISOString(),
+            untilDate: getLocalDayEnd(untilDate, displayTz),
           }),
         });
 
@@ -302,17 +327,17 @@ export function BookingModal({
                 onChange={(e) => {
                   const newStart = e.target.value;
                   setStartTime(newStart);
-                  const startIdx = TIME_OPTIONS.indexOf(newStart);
-                  if (startIdx >= 0 && startIdx < TIME_OPTIONS.length - 1) {
-                    const nextTime = TIME_OPTIONS[startIdx + 1];
-                    if (TIME_OPTIONS.indexOf(endTime) <= startIdx) {
+                  const startIdx = timeOptions.indexOf(newStart);
+                  if (startIdx >= 0 && startIdx < timeOptions.length - 1) {
+                    const nextTime = timeOptions[startIdx + 1];
+                    if (timeOptions.indexOf(endTime) <= startIdx) {
                       setEndTime(nextTime);
                     }
                   }
                 }}
                 className={`${fieldClass} appearance-none`}
               >
-                {TIME_OPTIONS.filter((t) => t < '19:00').map((t) => (
+                {timeOptions.slice(0, -1).map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>
@@ -338,7 +363,7 @@ export function BookingModal({
                 onChange={(e) => setEndTime(e.target.value)}
                 className={`${fieldClass} appearance-none`}
               >
-                {TIME_OPTIONS.filter((t) => t > startTime).map((t) => (
+                {timeOptions.slice(timeOptions.indexOf(startTime) + 1).map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>

@@ -5,13 +5,20 @@ import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { getWallClockTime, getKyivDateParts, getKyivDayStart } from '@/utils/timezone';
+import {
+  getDateParts,
+  getDayStart,
+  getDayStartForCalendarDate,
+  getOfficeWindow,
+  getWallClockTime,
+  officeRowIndexForLocalMinute,
+  OFFICE_DAY_MINUTES,
+  type OfficeWindowRow,
+} from '@/utils/timezone';
 import { BookingBlock } from './BookingBlock';
 import { BookingPopover } from './BookingPopover';
 import { GridDay } from './GridDay';
 import { ROOM_COLORS } from './RoomFilterBar';
-
-const TZ = 'Europe/Kyiv';
 
 interface BookingData {
   id: string;
@@ -44,14 +51,15 @@ interface ScheduleGridProps {
   bookings: BookingData[];
   currentUserId: string;
   weekOffset: number;
+  displayTz: string;
   onWeekChange: (offset: number) => void;
   onSlotClick: (roomId: string, date: string, startTime: string) => void;
 }
 
-function getWeekDays(offset: number): DayInfo[] {
+function getWeekDays(offset: number, displayTz: string): DayInfo[] {
   const now = new Date();
-  const todayParts = getKyivDateParts(now);
-  const todayStart = getKyivDayStart(now);
+  const todayParts = getDateParts(now, displayTz);
+  const todayStart = getDayStart(now, displayTz);
 
   const daysSinceMonday = todayParts.weekday === 0 ? 6 : todayParts.weekday - 1;
   const mondayStart = new Date(todayStart.getTime() - daysSinceMonday * 86400000 + offset * 7 * 86400000);
@@ -59,31 +67,31 @@ function getWeekDays(offset: number): DayInfo[] {
   const days: DayInfo[] = [];
   for (let i = 0; i < 7; i++) {
     const dayDate = new Date(mondayStart.getTime() + i * 86400000);
-    const parts = getKyivDateParts(dayDate);
+    const parts = getDateParts(dayDate, displayTz);
     days.push({ date: dayDate, ...parts });
   }
   return days;
 }
 
-export function getWeekOffsetForDate(dateStr: string): number {
+export function getWeekOffsetForDate(dateStr: string, displayTz: string): number {
   const [year, month, day] = dateStr.split('-').map(Number);
   if (!year || !month || !day) return 0;
 
-  const targetDayStart = getKyivDayStart(new Date(Date.UTC(year, month - 1, day)));
-  const targetParts = getKyivDateParts(targetDayStart);
+  const targetDayStart = getDayStartForCalendarDate(year, month - 1, day, displayTz);
+  const targetParts = getDateParts(targetDayStart, displayTz);
   const targetMonday = new Date(targetDayStart.getTime() - (targetParts.weekday === 0 ? 6 : targetParts.weekday - 1) * 86400000);
 
   const now = new Date();
-  const todayStart = getKyivDayStart(now);
-  const nowParts = getKyivDateParts(now);
+  const todayStart = getDayStart(now, displayTz);
+  const nowParts = getDateParts(now, displayTz);
   const nowMonday = new Date(todayStart.getTime() - (nowParts.weekday === 0 ? 6 : nowParts.weekday - 1) * 86400000);
 
   return Math.round((targetMonday.getTime() - nowMonday.getTime()) / (7 * 86400000));
 }
 
-function isToday(day: DayInfo): boolean {
+function isToday(day: DayInfo, displayTz: string): boolean {
   const now = new Date();
-  const todayParts = getKyivDateParts(now);
+  const todayParts = getDateParts(now, displayTz);
   return todayParts.year === day.year && todayParts.month === day.month && todayParts.day === day.day;
 }
 
@@ -102,26 +110,31 @@ interface PlacedBooking {
   widthPct: number;
 }
 
-function layoutDayBookings(bookings: BookingData[]): PlacedBooking[] {
+function layoutDayBookings(bookings: BookingData[], rows: readonly OfficeWindowRow[], displayTz: string): PlacedBooking[] {
   if (bookings.length === 0) return [];
 
-  const toMinutes = (iso: string): number => {
-    const wall = getWallClockTime(new Date(iso), TZ);
-    return wall.hours * 60 + wall.minutes;
+  const toRowIndex = (iso: string): number => {
+    const wall = getWallClockTime(new Date(iso), displayTz);
+    return officeRowIndexForLocalMinute(wall.hours * 60 + wall.minutes, rows);
+  };
+
+  const toEndRowIndex = (iso: string): number => {
+    const index = toRowIndex(iso);
+    return index < 0 ? rows.length : index;
   };
 
   const sorted = [...bookings].sort((a, b) => {
-    const startDiff = toMinutes(a.startTime) - toMinutes(b.startTime);
+    const startDiff = toRowIndex(a.startTime) - toRowIndex(b.startTime);
     if (startDiff !== 0) return startDiff;
-    return toMinutes(b.endTime) - toMinutes(a.endTime);
+    return toEndRowIndex(b.endTime) - toEndRowIndex(a.endTime);
   });
 
   const columnEnds: number[] = [];
   const placed: PlacedBooking[] = [];
 
   for (const booking of sorted) {
-    const start = toMinutes(booking.startTime);
-    const end = toMinutes(booking.endTime);
+    const start = Math.max(0, toRowIndex(booking.startTime));
+    const end = toEndRowIndex(booking.endTime);
 
     let column = columnEnds.findIndex((columnEnd) => columnEnd <= start);
     if (column === -1) {
@@ -146,8 +159,7 @@ function formatDateKey(day: DayInfo): string {
 }
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 9);
-const HALF_HOURS = HOURS.flatMap((h) => [`${String(h).padStart(2, '0')}:00`, `${String(h).padStart(2, '0')}:30`]);
+const ROW_COUNT = 20;
 
 export function ScheduleGrid({
   rooms,
@@ -155,10 +167,11 @@ export function ScheduleGrid({
   bookings,
   currentUserId,
   weekOffset,
+  displayTz,
   onWeekChange,
   onSlotClick,
 }: ScheduleGridProps) {
-  const days = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
+  const days = useMemo(() => getWeekDays(weekOffset, displayTz), [weekOffset, displayTz]);
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
   const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
   const [mobileDayIdx, setMobileDayIdx] = useState<number>(-1);
@@ -167,10 +180,15 @@ export function ScheduleGrid({
   useEffect(() => {
     function updateTime() {
       const now = new Date();
-      const wall = getWallClockTime(now, TZ);
-      const minutes = wall.hours * 60 + wall.minutes;
-      if (minutes >= 540 && minutes <= 1140) {
-        setCurrentTimePos(((minutes - 540) / 600) * 100);
+      const todayStart = getDayStart(now, displayTz);
+      const rows = getOfficeWindow(todayStart, displayTz);
+      const wall = getWallClockTime(now, displayTz);
+      const localMinutes = wall.hours * 60 + wall.minutes;
+      const windowStart = rows[0]?.localMinute ?? 0;
+      let delta = localMinutes - windowStart;
+      if (delta < 0) delta += 1440;
+      if (delta >= 0 && delta <= OFFICE_DAY_MINUTES) {
+        setCurrentTimePos((delta / OFFICE_DAY_MINUTES) * 100);
       } else {
         setCurrentTimePos(null);
       }
@@ -178,9 +196,9 @@ export function ScheduleGrid({
     updateTime();
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [displayTz]);
 
-  const todayIdx = days.findIndex(isToday);
+  const todayIdx = days.findIndex((day) => isToday(day, displayTz));
   const activeMobileDayIdx = mobileDayIdx >= 0 ? mobileDayIdx : todayIdx >= 0 ? todayIdx : 0;
   const isAllRooms = selectedRoomId === null;
 
@@ -189,34 +207,43 @@ export function ScheduleGrid({
     return bookings.filter((b) => b.roomId === selectedRoomId);
   }, [bookings, selectedRoomId, isAllRooms]);
 
+  const rowsByDay = useMemo(() => {
+    const map = new Map<string, OfficeWindowRow[]>();
+    for (const day of days) {
+      map.set(formatDateKey(day), getOfficeWindow(day.date, displayTz));
+    }
+    return map;
+  }, [days, displayTz]);
+
   const bookingsByDay = useMemo(() => {
     const map = new Map<string, BookingData[]>();
     for (const b of filteredBookings) {
       const startDate = new Date(b.startTime);
-      const parts = getKyivDateParts(startDate);
+      const parts = getDateParts(startDate, displayTz);
       const key = `${parts.year}-${String(parts.month + 1).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(b);
     }
     return map;
-  }, [filteredBookings]);
+  }, [filteredBookings, displayTz]);
 
   const placedBookingsByDay = useMemo(() => {
     const map = new Map<string, PlacedBooking[]>();
     for (const [key, list] of bookingsByDay) {
-      map.set(key, isAllRooms ? layoutDayBookings(list) : list.map((b) => ({ booking: b, leftPct: 0, widthPct: 100 })));
+      const rows = rowsByDay.get(key) ?? [];
+      map.set(key, isAllRooms ? layoutDayBookings(list, rows, displayTz) : list.map((b) => ({ booking: b, leftPct: 0, widthPct: 100 })));
     }
     return map;
-  }, [bookingsByDay, isAllRooms]);
+  }, [bookingsByDay, isAllRooms, rowsByDay, displayTz]);
 
   function handleBookingClick(booking: BookingData) {
     setSelectedBooking((prev) => (prev?.id === booking.id ? null : booking));
   }
 
-  function handleSlotClick(day: DayInfo, hour: number, minute: number) {
+  function handleSlotClick(day: DayInfo, localMinute: number) {
     const roomId = isAllRooms ? rooms[0]?.id ?? '' : selectedRoomId!;
     if (!roomId) return;
-    const startUtc = new Date(day.date.getTime() + hour * 3600000 + minute * 60000);
+    const startUtc = new Date(day.date.getTime() + localMinute * 60000);
     if (startUtc.getTime() <= new Date().getTime()) {
       setPastSlotStart(startUtc.toISOString());
       return;
@@ -226,7 +253,7 @@ export function ScheduleGrid({
 
   function formatPastSlotLabel(iso: string): string {
     return new Date(iso).toLocaleString('en-US', {
-      timeZone: TZ,
+      timeZone: displayTz,
       weekday: 'long',
       month: 'short',
       day: 'numeric',
@@ -235,7 +262,7 @@ export function ScheduleGrid({
     });
   }
 
-  const weekLabel = `Week of ${days[0].date.toLocaleDateString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const weekLabel = `Week of ${days[0].date.toLocaleDateString('en-US', { timeZone: displayTz, month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <div className="relative">
@@ -271,7 +298,7 @@ export function ScheduleGrid({
       <div className="mb-4 flex items-center gap-2 rounded-lg border-l-4 border-primary bg-surface-container px-4 py-2">
         <Icon name="info" size={18} className="text-primary" />
         <p className="text-label-md text-on-surface-variant">
-          Times displayed in your local time (UTC+2). Enforcing office hours (09:00&ndash;19:00 Europe/Kyiv).
+          Times displayed in your local timezone ({displayTz}). Enforcing office hours (09:00&ndash;19:00 Europe/Kyiv).
         </p>
       </div>
 
@@ -287,7 +314,7 @@ export function ScheduleGrid({
                 i === activeMobileDayIdx
                   ? 'bg-primary text-on-primary'
                   : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
-                isToday(day) && i !== activeMobileDayIdx && 'ring-1 ring-inset ring-primary',
+                isToday(day, displayTz) && i !== activeMobileDayIdx && 'ring-1 ring-inset ring-primary',
               )}
             >
               <div>{WEEKDAY_LABELS[day.weekday]}</div>
@@ -305,8 +332,9 @@ export function ScheduleGrid({
                   bookings={bookingsByDay.get(formatDateKey(day)) ?? []}
                   currentUserId={currentUserId}
                   isAllRooms={isAllRooms}
-                  isToday={isToday(day)}
+                  isToday={isToday(day, displayTz)}
                   currentTimePos={currentTimePos}
+                  displayTz={displayTz}
                   onSlotClick={handleSlotClick}
                   onBookingClick={handleBookingClick}
                 />
@@ -321,7 +349,7 @@ export function ScheduleGrid({
           className="grid min-w-[900px] overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm"
           style={{
             gridTemplateColumns: `80px repeat(7, 1fr)`,
-            gridTemplateRows: `auto repeat(20, 28px)`,
+            gridTemplateRows: `auto repeat(${ROW_COUNT}, 28px)`,
           }}
         >
           <div className="sticky top-0 z-20 border-b border-outline-variant bg-surface-container-low" />
@@ -330,52 +358,55 @@ export function ScheduleGrid({
               key={i}
               className={clsx(
                 'sticky top-0 z-20 border-b border-r border-outline-variant bg-surface-container-low px-2 py-2 text-center',
-                isToday(day) && 'bg-primary-fixed bg-opacity-10 ring-inset ring-2 ring-primary',
-                isWeekend(day) && !isToday(day) && 'bg-surface-container-lowest opacity-60',
+                isToday(day, displayTz) && 'bg-primary-fixed bg-opacity-10 ring-inset ring-2 ring-primary',
+                isWeekend(day) && !isToday(day, displayTz) && 'bg-surface-container-lowest opacity-60',
               )}
             >
               <div
                 className={clsx(
                   'text-label-sm uppercase tracking-wider',
-                  isToday(day) ? 'font-bold text-primary' : 'text-outline',
+                  isToday(day, displayTz) ? 'font-bold text-primary' : 'text-outline',
                 )}
               >
                 {WEEKDAY_LABELS[day.weekday]}
               </div>
-              <div className={clsx('text-headline-md', isToday(day) ? 'font-bold text-primary' : 'text-on-surface')}>
+              <div className={clsx('text-headline-md', isToday(day, displayTz) ? 'font-bold text-primary' : 'text-on-surface')}>
                 {day.day}
               </div>
-              {isToday(day) && (
+              {isToday(day, displayTz) && (
                 <div className="mt-0.5 text-[10px] font-bold text-primary">TODAY</div>
               )}
             </div>
           ))}
 
-          {HALF_HOURS.map((time, rowIdx) => (
-            <Fragment key={rowIdx}>
-              <div
-                className="flex items-center justify-end border-r border-outline-variant pr-2 text-label-sm text-outline"
-                style={{ gridRow: rowIdx + 2 }}
-              >
-                {time}
-              </div>
-              {days.map((day, dayIdx) => {
-                const hour = Math.floor(rowIdx / 2) + 9;
-                const minute = rowIdx % 2 === 0 ? 0 : 30;
-                return (
-                  <div
-                    key={`cell-${dayIdx}-${rowIdx}`}
-                    className={clsx(
-                      'relative cursor-pointer border-b border-r border-outline-variant transition-colors hover:bg-primary-container hover:bg-opacity-5',
-                      isWeekend(day) && 'bg-surface-container-lowest opacity-60',
-                    )}
-                    style={{ gridRow: rowIdx + 2, gridColumn: dayIdx + 2 }}
-                    onClick={() => handleSlotClick(day, hour, minute)}
-                  />
-                );
-              })}
-            </Fragment>
-          ))}
+          {Array.from({ length: ROW_COUNT }, (_, rowIdx) => {
+            const rows = rowsByDay.get(formatDateKey(days[0])) ?? [];
+            const label = rows[rowIdx]?.label ?? '';
+            return (
+              <Fragment key={rowIdx}>
+                <div
+                  className="flex items-center justify-end border-r border-outline-variant pr-2 text-label-sm text-outline"
+                  style={{ gridRow: rowIdx + 2 }}
+                >
+                  {label}
+                </div>
+                {days.map((day, dayIdx) => {
+                  const localMinute = rowsByDay.get(formatDateKey(day))?.[rowIdx]?.localMinute ?? 0;
+                  return (
+                    <div
+                      key={`cell-${dayIdx}-${rowIdx}`}
+                      className={clsx(
+                        'relative cursor-pointer border-b border-r border-outline-variant transition-colors hover:bg-primary-container hover:bg-opacity-5',
+                        isWeekend(day) && 'bg-surface-container-lowest opacity-60',
+                      )}
+                      style={{ gridRow: rowIdx + 2, gridColumn: dayIdx + 2 }}
+                      onClick={() => handleSlotClick(day, localMinute)}
+                    />
+                  );
+                })}
+              </Fragment>
+            );
+          })}
 
           {days.map((day, dayIdx) => {
             const dayKey = formatDateKey(day);
@@ -386,7 +417,7 @@ export function ScheduleGrid({
                 className="relative pointer-events-none"
                 style={{ gridRow: '2 / -1', gridColumn: dayIdx + 2 }}
               >
-                {isToday(day) && currentTimePos !== null && (
+                {isToday(day, displayTz) && currentTimePos !== null && (
                   <div
                     className="current-time-line"
                     style={{ top: `${currentTimePos}%` }}
@@ -399,6 +430,7 @@ export function ScheduleGrid({
                     currentUserId={currentUserId}
                     roomColor={getRoomColor(booking.roomId, rooms)}
                     isAllRooms={isAllRooms}
+                    displayTz={displayTz}
                     leftPct={leftPct}
                     widthPct={widthPct}
                     onClick={handleBookingClick}
@@ -406,6 +438,7 @@ export function ScheduleGrid({
                     {selectedBooking?.id === booking.id && (
                       <BookingPopover
                         booking={booking}
+                        displayTz={displayTz}
                         onClose={() => setSelectedBooking(null)}
                       />
                     )}

@@ -15,20 +15,21 @@ interface BookingData {
 
 interface BookingPopoverProps {
   booking: BookingData;
+  displayTz: string;
   onClose: () => void;
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, displayTz: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString('en-GB', { timeZone: displayTz, hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, displayTz: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { timeZone: displayTz, weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export function BookingPopover({ booking, onClose }: BookingPopoverProps) {
+export function BookingPopover({ booking, displayTz, onClose }: BookingPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export function BookingPopover({ booking, onClose }: BookingPopoverProps) {
         <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
           <Icon name="calendar_clock" size={16} className="shrink-0 text-outline" />
           <span>
-            {formatDate(booking.startTime)}, {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+            {formatDate(booking.startTime, displayTz)}, {formatTime(booking.startTime, displayTz)} - {formatTime(booking.endTime, displayTz)}
           </span>
         </div>
         <div className="border-t border-outline-variant pt-2">

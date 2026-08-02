@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { CancelBookingModal } from '@/components/bookings/CancelBookingModal';
 import { Icon } from '@/components/ui/Icon';
+import { useDisplayTimezone } from '@/lib/use-display-timezone';
 import { clsx } from 'clsx';
 
 interface UserData {
@@ -27,6 +28,7 @@ type Tab = 'upcoming' | 'past';
 
 export default function MyBookingsPage() {
   const router = useRouter();
+  const displayTz = useDisplayTimezone();
   const [user, setUser] = useState<UserData | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [bookings, setBookings] = useState<BookingData[]>([]);
@@ -105,7 +107,7 @@ export default function MyBookingsPage() {
       : past.slice(safePastPage * PAST_PAGE_SIZE, (safePastPage + 1) * PAST_PAGE_SIZE);
 
   function handleOpenRoomSchedule(booking: BookingData) {
-    const dateKey = new Date(booking.startTime).toLocaleDateString('en-CA', { timeZone: TZ });
+    const dateKey = new Date(booking.startTime).toLocaleDateString('en-CA', { timeZone: displayTz });
     router.push(`/schedule?roomId=${encodeURIComponent(booking.room.id)}&date=${dateKey}`);
   }
 
@@ -208,6 +210,7 @@ export default function MyBookingsPage() {
           <Table
             bookings={visible}
             tab={tab}
+            displayTz={displayTz}
             onCancel={handleCancel}
             onRowClick={handleOpenRoomSchedule}
             pagination={
@@ -255,20 +258,18 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-const TZ = 'Europe/Kyiv';
-
-function formatDate(iso: string): string {
+function formatDate(iso: string, displayTz: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
-    timeZone: TZ,
+    timeZone: displayTz,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, displayTz: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', {
-    timeZone: TZ,
+    timeZone: displayTz,
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -283,12 +284,14 @@ interface Pagination {
 function Table({
   bookings,
   tab,
+  displayTz,
   onCancel,
   onRowClick,
   pagination,
 }: {
   bookings: BookingData[];
   tab: Tab;
+  displayTz: string;
   onCancel: (b: BookingData) => void;
   onRowClick: (b: BookingData) => void;
   pagination?: Pagination;
@@ -332,9 +335,9 @@ function Table({
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
-                    <span className="text-on-surface">{formatDate(b.startTime)}</span>
+                    <span className="text-on-surface">{formatDate(b.startTime, displayTz)}</span>
                     <span className="text-label-sm text-on-surface-variant">
-                      {formatTime(b.startTime)} - {formatTime(b.endTime)}
+                      {formatTime(b.startTime, displayTz)} - {formatTime(b.endTime, displayTz)}
                     </span>
                   </div>
                 </td>

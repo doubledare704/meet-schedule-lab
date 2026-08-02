@@ -6,6 +6,8 @@ import { AppShell } from '@/components/layout/AppShell';
 import { RoomFilterBar } from '@/components/schedule/RoomFilterBar';
 import { ScheduleGrid, getWeekOffsetForDate } from '@/components/schedule/ScheduleGrid';
 import { BookingModal } from '@/components/schedule/BookingModal';
+import { useDisplayTimezone } from '@/lib/use-display-timezone';
+import { getNextOfficeSlot } from '@/utils/timezone';
 
 interface UserData {
   id: string;
@@ -32,6 +34,7 @@ interface BookingData {
 
 export default function SchedulePage() {
   const router = useRouter();
+  const displayTz = useDisplayTimezone();
   const [user, setUser] = useState<UserData | null>(null);
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [bookings, setBookings] = useState<BookingData[]>([]);
@@ -56,12 +59,12 @@ export default function SchedulePage() {
         }
         if (roomParam) setSelectedRoomId(roomParam);
         if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-          setWeekOffset(getWeekOffsetForDate(dateParam));
+          setWeekOffset(getWeekOffsetForDate(dateParam, displayTz));
         }
         setUser(body.data.user);
       })
       .catch(() => router.push('/login'));
-  }, [router]);
+  }, [router, displayTz]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -97,19 +100,11 @@ export default function SchedulePage() {
   }, [fetchBookings]);
 
   const handleOpenNewModal = useCallback((roomId?: string | null) => {
-    const now = new Date();
-    const target = new Date(now);
-    target.setMinutes(target.getMinutes() >= 30 ? 60 : 30, 0, 0);
-    if (target.getHours() < 9) {
-      target.setHours(9, 0, 0, 0);
-    } else if (target.getHours() >= 18) {
-      target.setDate(target.getDate() + 1);
-      target.setHours(10, 0, 0, 0);
-    }
-    const end = new Date(target.getTime() + 30 * 60000);
+    const start = getNextOfficeSlot(new Date());
+    const end = new Date(start.getTime() + 30 * 60000);
 
     setPrefilledRoomId(roomId ?? rooms[0]?.id ?? null);
-    setPrefilledStart(target.toISOString());
+    setPrefilledStart(start.toISOString());
     setPrefilledEnd(end.toISOString());
     setModalOpen(true);
   }, [rooms]);
@@ -145,6 +140,7 @@ export default function SchedulePage() {
         bookings={bookings}
         currentUserId={user.id}
         weekOffset={weekOffset}
+        displayTz={displayTz}
         onWeekChange={setWeekOffset}
         onSlotClick={handleSlotClick}
       />
@@ -157,6 +153,7 @@ export default function SchedulePage() {
         prefilledRoomId={prefilledRoomId}
         prefilledStart={prefilledStart}
         prefilledEnd={prefilledEnd}
+        displayTz={displayTz}
       />
     </AppShell>
   );
