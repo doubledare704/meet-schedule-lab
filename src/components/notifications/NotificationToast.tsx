@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
+import { parseExpiringNotification } from '@/utils/sse';
 
 interface Toast {
   id: string;
@@ -22,23 +23,20 @@ export function NotificationToast({ source }: NotificationToastProps) {
     if (!source) return;
 
     function handleEvent(e: MessageEvent) {
-      try {
-        const data = JSON.parse(e.data);
-        setToasts((prev) => {
-          if (prev.some((t) => t.id === data.bookingId)) return prev;
-          return [
-            ...prev,
-            {
-              id: data.bookingId,
-              roomName: data.roomName,
-              minutesUntilStart: data.minutesUntilStart,
-              startTime: data.startTime,
-            },
-          ];
-        });
-      } catch {
-        // Ignore parse errors
-      }
+      const data = parseExpiringNotification(e.data);
+      if (!data) return;
+      setToasts((prev) => {
+        if (prev.some((t) => t.id === data.bookingId)) return prev;
+        return [
+          ...prev,
+          {
+            id: data.bookingId,
+            roomName: data.roomName,
+            minutesUntilStart: data.minutesUntilStart,
+            startTime: data.startTime,
+          },
+        ];
+      });
     }
 
     source.addEventListener('booking-expiring', handleEvent);

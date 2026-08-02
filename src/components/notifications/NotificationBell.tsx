@@ -3,13 +3,10 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
-
-interface ExpiringNotification {
-  bookingId: string;
-  roomName: string;
-  startTime: string;
-  minutesUntilStart: number;
-}
+import {
+  parseExpiringNotification,
+  type ExpiringNotification,
+} from '@/utils/sse';
 
 interface NotificationBellProps {
   source: EventSource | null;
@@ -23,15 +20,12 @@ export function NotificationBell({ source }: NotificationBellProps) {
     if (!source) return;
 
     function handleEvent(e: MessageEvent) {
-      try {
-        const data: ExpiringNotification = JSON.parse(e.data);
-        setNotifications((prev) => {
-          if (prev.some((n) => n.bookingId === data.bookingId)) return prev;
-          return [...prev, data];
-        });
-      } catch {
-        // Ignore parse errors
-      }
+      const data = parseExpiringNotification(e.data);
+      if (!data) return;
+      setNotifications((prev) => {
+        if (prev.some((n) => n.bookingId === data.bookingId)) return prev;
+        return [...prev, data];
+      });
     }
 
     source.addEventListener('booking-expiring', handleEvent);

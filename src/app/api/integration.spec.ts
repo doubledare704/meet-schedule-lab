@@ -4,6 +4,7 @@ import { GET as getBookings, POST as createBooking } from './bookings/route';
 import { DELETE as cancelBooking } from './bookings/[id]/route';
 import { POST as createRecurring } from './bookings/recurring/route';
 import { GET as getRooms } from './rooms/route';
+import { GET as getSse } from './notifications/sse/route';
 import {
   TEST_USER,
   TEST_ROOM_ID,
@@ -237,5 +238,70 @@ describe('concurrency', () => {
         await db.booking.delete({ where: { id: body.data.booking.id } });
       }
     }
+  });
+});
+
+describe('GET /api/notifications/sse', () => {
+  function readUntilEvent(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    marker: string,
+    timeoutMs = 5000,
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const timer = setTimeout(() => {
+        reject(new Error(`Timed out waiting for "${marker}"`));
+      }, timeoutMs);
+
+      async function pump(): Promise<void> {
+        const { done, value } = await reader.read();
+        if (done) {
+          clearTimeout(timer);
+          resolve(buffer);
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        if (buffer.includes(marker)) {
+          clearTimeout(timer);
+          resolve(buffer);
+          return;
+        }
+        await pump();
+      }
+
+      void pump();
+    });
+  }
+
+  it('emits a well-formed single-line JSON payload for an expiring booking', async () => {
+    const start = new Date(Date.now() + 3 * 60000);
+    const end = new Date(start.getTime() + 30 * 60000);
+    const booking = await db.booking.create({
+      data: {
+        roomId: TEST_ROOM_ID,
+        userId: TEST_USER.id,
+        title: 'SSE regression',
+        startTime: start,
+        endTime: end,
+      },
+    });
+
+    const res = await getSse(
+      new NextRequest(new Request(new URL('http://localhost/api/notifications/sse'))),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await readUntilEvent(res.body!.getReader(), 'booking-expiring');
+    expect(body).toContain(`"bookingId":"${booking.id}"`);
+
+    const eventBlock = body.split('\n\n').find((b) => b.includes('booking-expiring')) ?? '';
+    const dataLine = eventBlock.split('\n').find((l) => l.startsWith('data: ')) ?? '';
+    const json = dataLine.slice('data: '.length);
+    expect(json).not.toContain('\n');
+    expect(() => JSON.parse(json)).not.toThrow();
+    expect(JSON.parse(json).bookingId).toBe(booking.id);
+
+    await db.booking.delete({ where: { id: booking.id } });
   });
 });

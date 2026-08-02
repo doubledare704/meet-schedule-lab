@@ -10,11 +10,33 @@ export async function GET(request: Request) {
   const userId = session.id;
   let notifiedIds = new Set<string>();
 
-  const stream = new ReadableStream({
+  const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      controller.enqueue(new TextEncoder().encode('event: connected\ndata: {}\n\n'));
+      let closed = false;
 
-      async function checkExpiringBookings() {
+      const close = (): void => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // Stream already closed or errored
+        }
+      };
+
+      const enqueue = (chunk: Uint8Array): void => {
+        if (closed) return;
+        try {
+          controller.enqueue(chunk);
+        } catch {
+          close();
+        }
+      };
+
+      enqueue(new TextEncoder().encode('event: connected\ndata: {}\n\n'));
+
+      async function checkExpiringBookings(): Promise<void> {
+        if (closed) return;
         try {
           const now = new Date();
           const in10Min = new Date(now.getTime() + 10 * 60 * 1000);
@@ -31,6 +53,7 @@ export async function GET(request: Request) {
           });
 
           for (const booking of bookings) {
+            if (closed) return;
             if (notifiedIds.has(booking.id)) continue;
             notifiedIds.add(booking.id);
 
@@ -45,36 +68,35 @@ export async function GET(request: Request) {
               minutesUntilStart: Math.max(0, minutesUntil),
             });
 
-            controller.enqueue(
-              new TextEncoder().encode(`event: booking-expiring\ndata: ${data}\n\n`),
+            enqueue(
+              new TextEncoder().encode(
+                `event: booking-expiring\ndata: ${data}\n\n`,
+              ),
             );
           }
 
           if (notifiedIds.size > 200) {
             const expiredThreshold = new Date(now.getTime() - 5 * 60 * 1000);
-            const activeIds = new Set(
+            notifiedIds = new Set(
               bookings
                 .filter((b) => b.startTime > expiredThreshold)
                 .map((b) => b.id),
             );
-            notifiedIds = activeIds;
           }
         } catch {
           // Silently retry on next tick
         }
       }
 
-      checkExpiringBookings();
-      const interval = setInterval(checkExpiringBookings, 30000);
+      void checkExpiringBookings();
+      const interval = setInterval(() => {
+        void checkExpiringBookings();
+      }, 30000);
 
       request.signal.addEventListener('abort', () => {
         clearInterval(interval);
         notifiedIds.clear();
-        try {
-          controller.close();
-        } catch {
-          // Stream already closed
-        }
+        close();
       });
     },
   });
