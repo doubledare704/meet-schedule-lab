@@ -23,16 +23,23 @@ export async function registerUser(input: {
   }
 
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_SALT_ROUNDS);
+  const emailVerificationToken = crypto.randomUUID();
 
   const user = await db.user.create({
     data: {
       email: normalizedEmail,
       name: input.name.trim(),
       passwordHash,
-      isEmailVerified: true,
+      isEmailVerified: false,
+      emailVerificationToken,
     },
     select: { id: true, email: true, name: true },
   });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  console.log(
+    `[DEV EMAIL VERIFICATION LINK]: ${appUrl}/api/auth/verify-email?token=${emailVerificationToken}`,
+  );
 
   return { success: true, user };
 }
@@ -63,10 +70,30 @@ export async function loginUser(input: {
 
 export async function getUserById(
   id: string
-): Promise<Pick<User, 'id' | 'email' | 'name'> | null> {
+): Promise<Pick<User, 'id' | 'email' | 'name' | 'isEmailVerified'> | null> {
   const user = await db.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, isEmailVerified: true },
   });
   return user;
+}
+
+export async function verifyEmail(input: {
+  token: string;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  const user = await db.user.findUnique({
+    where: { emailVerificationToken: input.token },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return { success: false, error: 'Invalid or expired verification link.' };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { isEmailVerified: true, emailVerificationToken: null },
+  });
+
+  return { success: true };
 }

@@ -11,7 +11,19 @@ export async function createBooking(input: {
   title: string;
   startTime: Date;
   endTime: Date;
-}): Promise<{ success: true; booking: Booking } | { success: false; error: string }> {
+}): Promise<{ success: true; booking: Booking } | { success: false; error: string; status?: number }> {
+  const user = await db.user.findUnique({
+    where: { id: input.userId },
+    select: { isEmailVerified: true },
+  });
+  if (!user?.isEmailVerified) {
+    return {
+      success: false,
+      error: 'Email must be verified before making bookings.',
+      status: 403,
+    };
+  }
+
   const validation = validateBookingRules({
     startTime: input.startTime,
     endTime: input.endTime,
@@ -201,8 +213,20 @@ export async function createRecurringSeries(input: {
       created: Booking[];
       skipped: Array<{ date: string; reason: string }>;
     }
-  | { success: false; error: string }
+  | { success: false; error: string; status?: number }
 > {
+  const user = await db.user.findUnique({
+    where: { id: input.userId },
+    select: { isEmailVerified: true },
+  });
+  if (!user?.isEmailVerified) {
+    return {
+      success: false,
+      error: 'Email must be verified before making bookings.',
+      status: 403,
+    };
+  }
+
   const firstStart = combineDateAndTime(input.startDate, input.startTime);
   const firstEnd = combineDateAndTime(input.startDate, input.endTime);
 

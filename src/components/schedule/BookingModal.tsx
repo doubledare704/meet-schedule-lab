@@ -26,6 +26,7 @@ interface BookingModalProps {
   prefilledRoomId: string | null;
   prefilledStart: string;
   prefilledEnd: string;
+  canBook: boolean;
   displayTz: string;
 }
 
@@ -72,6 +73,7 @@ export function BookingModal({
   prefilledRoomId,
   prefilledStart,
   prefilledEnd,
+  canBook,
   displayTz,
 }: BookingModalProps) {
   const [roomId, setRoomId] = useState(prefilledRoomId ?? rooms[0]?.id ?? '');
@@ -108,6 +110,11 @@ export function BookingModal({
     e.preventDefault();
     setError(null);
     setSummary(null);
+
+    if (!canBook) {
+      setError('Email verification required to book rooms.');
+      return;
+    }
 
     if (!roomId) {
       setError('Please select a room');
@@ -422,7 +429,12 @@ export function BookingModal({
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={loading}>
+          <Button
+            type="submit"
+            loading={loading}
+            disabled={!canBook}
+            title={canBook ? undefined : 'Email verification required to book rooms.'}
+          >
             {recurring ? 'Create Series' : 'Confirm Reservation'}
           </Button>
         </div>

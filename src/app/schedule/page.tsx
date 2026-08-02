@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { RoomFilterBar } from '@/components/schedule/RoomFilterBar';
 import { ScheduleGrid, getWeekOffsetForDate } from '@/components/schedule/ScheduleGrid';
 import { BookingModal } from '@/components/schedule/BookingModal';
+import { Icon } from '@/components/ui/Icon';
 import { useDisplayTimezone } from '@/lib/use-display-timezone';
 import { getNextOfficeSlot } from '@/utils/timezone';
 
@@ -13,6 +14,7 @@ interface UserData {
   id: string;
   email: string;
   name: string;
+  isEmailVerified: boolean;
 }
 
 interface RoomData {
@@ -124,6 +126,14 @@ export default function SchedulePage() {
 
   return (
     <AppShell userName={user.name} onBookRoomClick={() => handleOpenNewModal(effectiveSelectedRoomId)}>
+      {!user.isEmailVerified && (
+        <div className="flex items-center gap-2 rounded-lg border border-secondary/40 bg-secondary-container/40 px-4 py-3 text-body-sm text-on-surface">
+          <Icon name="mark_email_unread" size={18} className="text-secondary" />
+          <span>
+            Your email is not verified. Please check the server console logs for the verification link to unlock booking.
+          </span>
+        </div>
+      )}
       <RoomFilterBar
         rooms={rooms}
         selectedRoomId={effectiveSelectedRoomId}
@@ -153,6 +163,7 @@ export default function SchedulePage() {
         prefilledRoomId={prefilledRoomId}
         prefilledStart={prefilledStart}
         prefilledEnd={prefilledEnd}
+        canBook={user.isEmailVerified}
         displayTz={displayTz}
       />
     </AppShell>

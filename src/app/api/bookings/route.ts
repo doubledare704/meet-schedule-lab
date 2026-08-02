@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.success) {
-    return errorResponse(result.error, 409);
+    return errorResponse(result.error, result.status ?? 409);
   }
 
   return successResponse({ booking: result.booking }, 201);

@@ -10,6 +10,7 @@ export const TEST_USER = {
   email: TEST_USER_EMAIL,
   name: 'Test User',
   passwordHash: 'mock-hash',
+  isEmailVerified: true,
 };
 
 export const TEST_ROOM = {

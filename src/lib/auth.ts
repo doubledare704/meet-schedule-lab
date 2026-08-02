@@ -29,7 +29,7 @@ export async function clearSessionCookie(): Promise<void> {
 }
 
 export async function getSession(): Promise<
-  Pick<User, 'id' | 'email' | 'name'> | null
+  Pick<User, 'id' | 'email' | 'name' | 'isEmailVerified'> | null
 > {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -40,7 +40,7 @@ export async function getSession(): Promise<
 
   const user = await db.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, isEmailVerified: true },
   });
 
   return user;
