@@ -3,35 +3,32 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
-import {
-  parseExpiringNotification,
-  type ExpiringNotification,
-} from '@/utils/sse';
+import { parseNotification, type NotificationEvent } from '@/utils/sse';
 
 interface NotificationBellProps {
   source: EventSource | null;
 }
 
 export function NotificationBell({ source }: NotificationBellProps) {
-  const [notifications, setNotifications] = useState<ExpiringNotification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!source) return;
 
     function handleEvent(e: MessageEvent) {
-      const data = parseExpiringNotification(e.data);
+      const data = parseNotification(e.data);
       if (!data) return;
       setNotifications((prev) => {
-        if (prev.some((n) => n.bookingId === data.bookingId)) return prev;
+        if (prev.some((n) => n.id === data.id)) return prev;
         return [...prev, data];
       });
     }
 
-    source.addEventListener('booking-expiring', handleEvent);
+    source.addEventListener('notification', handleEvent);
 
     return () => {
-      source.removeEventListener('booking-expiring', handleEvent);
+      source.removeEventListener('notification', handleEvent);
     };
   }, [source]);
 
@@ -119,7 +116,7 @@ export function NotificationBell({ source }: NotificationBellProps) {
             <div className="divide-y divide-outline-variant">
               {notifications.map((n, idx) => (
                 <div
-                  key={n.bookingId}
+                  key={n.id}
                   className={clsx(
                     'relative cursor-pointer p-6 transition-colors',
                     idx === 0 ? 'border-l-4 border-primary bg-primary-fixed/10' : 'hover:bg-surface-container-low',
@@ -130,15 +127,8 @@ export function NotificationBell({ source }: NotificationBellProps) {
                       <Icon name="timer" size={20} filled={idx === 0} className="text-primary" />
                     </span>
                     <div className="flex-1">
-                      <h4 className="text-label-md font-bold text-on-surface">Slot Starting Soon</h4>
-                      <p className="mt-1 text-body-sm leading-relaxed text-on-surface-variant">
-                        Your booking in <strong className="text-on-surface">{n.roomName}</strong> starts
-                        in {n.minutesUntilStart} min at{' '}
-                        {new Date(n.startTime).toLocaleTimeString('en-GB', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        .
+                      <p className="text-body-sm leading-relaxed text-on-surface-variant">
+                        {n.message}
                       </p>
                     </div>
                   </div>

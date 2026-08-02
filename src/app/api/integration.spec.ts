@@ -274,16 +274,12 @@ describe('GET /api/notifications/sse', () => {
     });
   }
 
-  it('emits a well-formed single-line JSON payload for an expiring booking', async () => {
-    const start = new Date(Date.now() + 3 * 60000);
-    const end = new Date(start.getTime() + 30 * 60000);
-    const booking = await db.booking.create({
+  it('emits a well-formed single-line JSON payload for a persisted notification', async () => {
+    const notification = await db.notification.create({
       data: {
-        roomId: TEST_ROOM_ID,
         userId: TEST_USER.id,
-        title: 'SSE regression',
-        startTime: start,
-        endTime: end,
+        type: 'SLOT_ENDING_SOON',
+        message: 'Your booking in Integration Test Room A ends in 10 minutes.',
       },
     });
 
@@ -292,16 +288,17 @@ describe('GET /api/notifications/sse', () => {
     );
     expect(res.status).toBe(200);
 
-    const body = await readUntilEvent(res.body!.getReader(), 'booking-expiring');
-    expect(body).toContain(`"bookingId":"${booking.id}"`);
+    const body = await readUntilEvent(res.body!.getReader(), 'notification');
+    expect(body).toContain(`"id":"${notification.id}"`);
 
-    const eventBlock = body.split('\n\n').find((b) => b.includes('booking-expiring')) ?? '';
+    const eventBlock = body.split('\n\n').find((b) => b.includes('notification')) ?? '';
     const dataLine = eventBlock.split('\n').find((l) => l.startsWith('data: ')) ?? '';
     const json = dataLine.slice('data: '.length);
     expect(json).not.toContain('\n');
     expect(() => JSON.parse(json)).not.toThrow();
-    expect(JSON.parse(json).bookingId).toBe(booking.id);
+    expect(JSON.parse(json).id).toBe(notification.id);
+    expect(JSON.parse(json).message).toContain('ends in 10 minutes');
 
-    await db.booking.delete({ where: { id: booking.id } });
+    await db.notification.delete({ where: { id: notification.id } });
   });
 });

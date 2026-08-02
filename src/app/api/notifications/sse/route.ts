@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   }
 
   const userId = session.id;
-  let notifiedIds = new Set<string>();
+  const notifiedIds = new Set<string>();
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -35,52 +35,31 @@ export async function GET(request: Request) {
 
       enqueue(new TextEncoder().encode('event: connected\ndata: {}\n\n'));
 
-      async function checkExpiringBookings(): Promise<void> {
+      async function checkUnreadNotifications(): Promise<void> {
         if (closed) return;
         try {
-          const now = new Date();
-          const in10Min = new Date(now.getTime() + 10 * 60 * 1000);
-
-          const bookings = await db.booking.findMany({
-            where: {
-              userId,
-              startTime: { gte: now, lte: in10Min },
-            },
-            include: {
-              room: { select: { name: true } },
-            },
-            orderBy: { startTime: 'asc' },
+          const notifications = await db.notification.findMany({
+            where: { userId, isRead: false },
+            orderBy: { createdAt: 'asc' },
           });
 
-          for (const booking of bookings) {
+          for (const notification of notifications) {
             if (closed) return;
-            if (notifiedIds.has(booking.id)) continue;
-            notifiedIds.add(booking.id);
-
-            const minutesUntil = Math.round(
-              (booking.startTime.getTime() - now.getTime()) / 60000,
-            );
+            if (notifiedIds.has(notification.id)) continue;
+            notifiedIds.add(notification.id);
 
             const data = JSON.stringify({
-              bookingId: booking.id,
-              roomName: booking.room.name,
-              startTime: booking.startTime.toISOString(),
-              minutesUntilStart: Math.max(0, minutesUntil),
+              id: notification.id,
+              bookingId: notification.bookingId,
+              type: notification.type,
+              message: notification.message,
+              createdAt: notification.createdAt.toISOString(),
             });
 
             enqueue(
               new TextEncoder().encode(
-                `event: booking-expiring\ndata: ${data}\n\n`,
+                `event: notification\ndata: ${data}\n\n`,
               ),
-            );
-          }
-
-          if (notifiedIds.size > 200) {
-            const expiredThreshold = new Date(now.getTime() - 5 * 60 * 1000);
-            notifiedIds = new Set(
-              bookings
-                .filter((b) => b.startTime > expiredThreshold)
-                .map((b) => b.id),
             );
           }
         } catch {
@@ -88,9 +67,9 @@ export async function GET(request: Request) {
         }
       }
 
-      void checkExpiringBookings();
+      void checkUnreadNotifications();
       const interval = setInterval(() => {
-        void checkExpiringBookings();
+        void checkUnreadNotifications();
       }, 30000);
 
       request.signal.addEventListener('abort', () => {

@@ -83,6 +83,7 @@ model Booking {
 
 enum NotificationType {
   SLOT_ENDING_SOON
+  SLOT_STARTING_SOON
   BOOKING_CANCELLED
 }
 
@@ -101,5 +102,6 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, isRead])
+  @@unique([bookingId, type])
   @@map("notifications")
 }

@@ -3,46 +3,31 @@
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
-import { parseExpiringNotification } from '@/utils/sse';
-
-interface Toast {
-  id: string;
-  roomName: string;
-  minutesUntilStart: number;
-  startTime: string;
-}
+import { parseNotification, type NotificationEvent } from '@/utils/sse';
 
 interface NotificationToastProps {
   source: EventSource | null;
 }
 
 export function NotificationToast({ source }: NotificationToastProps) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toasts, setToasts] = useState<NotificationEvent[]>([]);
 
   useEffect(() => {
     if (!source) return;
 
     function handleEvent(e: MessageEvent) {
-      const data = parseExpiringNotification(e.data);
+      const data = parseNotification(e.data);
       if (!data) return;
       setToasts((prev) => {
-        if (prev.some((t) => t.id === data.bookingId)) return prev;
-        return [
-          ...prev,
-          {
-            id: data.bookingId,
-            roomName: data.roomName,
-            minutesUntilStart: data.minutesUntilStart,
-            startTime: data.startTime,
-          },
-        ];
+        if (prev.some((t) => t.id === data.id)) return prev;
+        return [...prev, data];
       });
     }
 
-    source.addEventListener('booking-expiring', handleEvent);
+    source.addEventListener('notification', handleEvent);
 
     return () => {
-      source.removeEventListener('booking-expiring', handleEvent);
+      source.removeEventListener('notification', handleEvent);
     };
   }, [source]);
 
@@ -65,14 +50,7 @@ export function NotificationToast({ source }: NotificationToastProps) {
             <Icon name="timer" size={20} className="text-primary" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-label-md font-medium text-on-surface">{toast.roomName}</p>
-            <p className="text-body-sm text-on-surface-variant">
-              Starts in {toast.minutesUntilStart} min at{' '}
-              {new Date(toast.startTime).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
+            <p className="text-body-sm text-on-surface">{toast.message}</p>
           </div>
           <button
             type="button"

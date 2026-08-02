@@ -1,8 +1,17 @@
-export interface ExpiringNotification {
-  bookingId: string;
-  roomName: string;
-  startTime: string;
-  minutesUntilStart: number;
+import type { NotificationType } from '@prisma/client';
+
+const NOTIFICATION_TYPES: readonly NotificationType[] = [
+  'SLOT_ENDING_SOON',
+  'SLOT_STARTING_SOON',
+  'BOOKING_CANCELLED',
+];
+
+export interface NotificationEvent {
+  id: string;
+  bookingId: string | null;
+  type: NotificationType;
+  message: string;
+  createdAt: string;
 }
 
 /**
@@ -43,13 +52,11 @@ export function extractFirstJsonObject(text: string): string | null {
 }
 
 /**
- * Parses an SSE `data:` payload into an ExpiringNotification, tolerating
- * trailing whitespace, embedded newlines, or concatenated event payloads.
+ * Parses an SSE `data:` payload into a NotificationEvent, tolerating trailing
+ * whitespace, embedded newlines, or concatenated event payloads.
  * Returns null when the payload is missing or malformed.
  */
-export function parseExpiringNotification(
-  rawData: string,
-): ExpiringNotification | null {
+export function parseNotification(rawData: string): NotificationEvent | null {
   const jsonText = extractFirstJsonObject(rawData);
   if (!jsonText) return null;
 
@@ -64,18 +71,24 @@ export function parseExpiringNotification(
   const candidate = parsed as Record<string, unknown>;
 
   if (
-    typeof candidate.bookingId !== 'string' ||
-    typeof candidate.roomName !== 'string' ||
-    typeof candidate.startTime !== 'string' ||
-    typeof candidate.minutesUntilStart !== 'number'
+    typeof candidate.id !== 'string' ||
+    (typeof candidate.bookingId !== 'string' && candidate.bookingId !== null) ||
+    typeof candidate.type !== 'string' ||
+    typeof candidate.message !== 'string' ||
+    typeof candidate.createdAt !== 'string'
   ) {
     return null;
   }
 
+  if (!NOTIFICATION_TYPES.includes(candidate.type as NotificationType)) {
+    return null;
+  }
+
   return {
+    id: candidate.id,
     bookingId: candidate.bookingId,
-    roomName: candidate.roomName,
-    startTime: candidate.startTime,
-    minutesUntilStart: candidate.minutesUntilStart,
+    type: candidate.type as NotificationType,
+    message: candidate.message,
+    createdAt: candidate.createdAt,
   };
 }

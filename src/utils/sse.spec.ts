@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   extractFirstJsonObject,
-  parseExpiringNotification,
+  parseNotification,
 } from './sse';
 
 describe('extractFirstJsonObject', () => {
@@ -30,35 +30,50 @@ describe('extractFirstJsonObject', () => {
   });
 });
 
-describe('parseExpiringNotification', () => {
+describe('parseNotification', () => {
   const valid = {
+    id: 'notif-123',
     bookingId: 'abc-123',
-    roomName: 'Jupiter',
-    startTime: '2026-08-02T08:30:00.000Z',
-    minutesUntilStart: 5,
+    type: 'SLOT_ENDING_SOON',
+    message: 'Your booking in Jupiter ends in 5 minutes.',
+    createdAt: '2026-08-02T08:30:00.000Z',
   };
   const validJson = JSON.stringify(valid);
 
   it('parses a well-formed payload', () => {
-    expect(parseExpiringNotification(validJson)).toEqual(valid);
+    expect(parseNotification(validJson)).toEqual(valid);
+  });
+
+  it('accepts a null bookingId', () => {
+    const payload = { ...valid, bookingId: null };
+    expect(parseNotification(JSON.stringify(payload))).toEqual(payload);
   });
 
   it('tolerates trailing whitespace and newlines', () => {
-    expect(parseExpiringNotification(validJson + '\n\n')).toEqual(valid);
-    expect(parseExpiringNotification('  ' + validJson + '  ')).toEqual(valid);
+    expect(parseNotification(validJson + '\n\n')).toEqual(valid);
+    expect(parseNotification('  ' + validJson + '  ')).toEqual(valid);
   });
 
   it('tolerates concatenated SSE payloads', () => {
-    expect(parseExpiringNotification(validJson + validJson)).toEqual(valid);
-    expect(parseExpiringNotification(validJson + '\n' + validJson)).toEqual(
-      valid,
-    );
+    expect(parseNotification(validJson + validJson)).toEqual(valid);
+    expect(parseNotification(validJson + '\n' + validJson)).toEqual(valid);
   });
 
   it('returns null for malformed or non-object payloads', () => {
-    expect(parseExpiringNotification('not json')).toBeNull();
-    expect(parseExpiringNotification('null')).toBeNull();
-    expect(parseExpiringNotification('[1,2,3]')).toBeNull();
-    expect(parseExpiringNotification('{"a":1}')).toBeNull();
+    expect(parseNotification('not json')).toBeNull();
+    expect(parseNotification('null')).toBeNull();
+    expect(parseNotification('[1,2,3]')).toBeNull();
+    expect(parseNotification('{"a":1}')).toBeNull();
+  });
+
+  it('returns null for an unknown notification type', () => {
+    expect(parseNotification(JSON.stringify({ ...valid, type: 'UNKNOWN' }))).toBeNull();
+  });
+
+  it('returns null when required fields are missing', () => {
+    expect(parseNotification(JSON.stringify({ id: 'x' }))).toBeNull();
+    expect(
+      parseNotification(JSON.stringify({ ...valid, message: 42 })),
+    ).toBeNull();
   });
 });
