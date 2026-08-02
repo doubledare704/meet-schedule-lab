@@ -42,7 +42,7 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
       />
       <div
         className={clsx(
-          'relative z-10 w-full max-w-xl overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-2xl animate-scale-in',
+          'relative z-10 flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-2xl animate-scale-in',
           className,
         )}
       >
@@ -61,7 +61,9 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
             <Icon name="close" size={20} />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );

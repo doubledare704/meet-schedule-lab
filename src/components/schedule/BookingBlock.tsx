@@ -75,7 +75,7 @@ export function BookingBlock({
         }
       }}
       className={clsx(
-        'pointer-events-auto absolute z-10 flex cursor-pointer text-left text-label-sm leading-tight shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary',
+        'pointer-events-auto absolute z-10 flex cursor-pointer text-left text-label-sm leading-tight shadow-sm transition-all active:scale-[0.98] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary',
         leftPct === undefined && 'left-0.5 right-0.5',
         isShort ? 'flex-row items-center justify-between px-2 py-0.5 text-[11px]' : 'flex-col justify-between overflow-visible rounded-lg px-2 py-1.5',
         isOwn

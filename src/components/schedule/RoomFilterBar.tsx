@@ -1,6 +1,7 @@
 'use client';
 
 import { clsx } from 'clsx';
+import { Icon } from '@/components/ui/Icon';
 
 interface Room {
   id: string;
@@ -44,13 +45,13 @@ export function RoomFilterBar({
   onCapacityChange,
 }: RoomFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+      <div className="hidden md:flex flex-1 gap-2 overflow-x-auto no-scrollbar pr-2">
         <button
           type="button"
           onClick={() => onRoomChange(null)}
           className={clsx(
-            'rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
+            'shrink-0 rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
             selectedRoomId === null
               ? 'bg-primary text-on-primary shadow-sm'
               : 'border border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
@@ -64,7 +65,7 @@ export function RoomFilterBar({
             type="button"
             onClick={() => onRoomChange(room.id)}
             className={clsx(
-              'rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
+              'shrink-0 rounded-full px-4 py-2 text-label-md transition-all active:scale-95',
               selectedRoomId === room.id
                 ? 'bg-primary text-on-primary shadow-sm'
                 : 'border border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
@@ -75,25 +76,36 @@ export function RoomFilterBar({
               style={{ backgroundColor: ROOM_COLORS[idx % ROOM_COLORS.length] }}
             />
             {room.name}
+            <span className="ml-1 text-on-surface-variant opacity-70">
+              ({room.capacity})
+            </span>
           </button>
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <span className="text-label-md text-on-surface-variant">Capacity:</span>
-        <select
-          value={capacityFilter ?? ''}
-          onChange={(e) =>
-            onCapacityChange(e.target.value ? Number(e.target.value) : null)
-          }
-          className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-label-md text-on-surface focus:border-primary focus:outline-none"
-        >
-          {CAPACITY_OPTIONS.map((opt) => (
-            <option key={opt.label} value={opt.value ?? ''}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+      <div className="flex shrink-0 gap-1">
+        {CAPACITY_OPTIONS.map((opt) => (
+          <button
+            key={opt.label}
+            type="button"
+            onClick={() => onCapacityChange(opt.value)}
+            className={clsx(
+              'rounded-full px-3 py-2 text-label-sm transition-all active:scale-95',
+              capacityFilter === opt.value
+                ? 'bg-secondary text-on-secondary shadow-sm'
+                : 'border border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
+            )}
+          >
+            {opt.value ? (
+              <span className="flex items-center gap-1">
+                <Icon name="filter_list" size={14} />
+                {opt.label}
+              </span>
+            ) : (
+              'Any'
+            )}
+          </button>
+        ))}
       </div>
     </div>
   );

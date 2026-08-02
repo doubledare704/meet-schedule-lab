@@ -9,9 +9,10 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 interface HeaderProps {
   userName: string;
   source: EventSource | null;
+  onMenuClick?: () => void;
 }
 
-export function Header({ userName, source }: HeaderProps) {
+export function Header({ userName, source, onMenuClick }: HeaderProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -24,9 +25,21 @@ export function Header({ userName, source }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
-        <Link href="/schedule" className="text-headline-md font-bold text-primary">
-          meet-schedule-lab
-        </Link>
+        <div className="flex items-center gap-2">
+          {onMenuClick && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              className="rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container active:scale-95 md:hidden"
+              aria-label="Open menu"
+            >
+              <Icon name="menu" size={24} />
+            </button>
+          )}
+          <Link href="/schedule" className="text-headline-md font-bold text-primary">
+            Booking Lab
+          </Link>
+        </div>
 
         <div className="flex items-center gap-2">
           <NotificationBell source={source} />

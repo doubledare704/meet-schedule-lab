@@ -19,6 +19,7 @@ import { BookingBlock } from './BookingBlock';
 import { BookingPopover } from './BookingPopover';
 import { GridDay } from './GridDay';
 import { ROOM_COLORS } from './RoomFilterBar';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 interface BookingData {
   id: string;
@@ -177,6 +178,30 @@ export function ScheduleGrid({
   const [mobileDayIdx, setMobileDayIdx] = useState<number>(-1);
   const [pastSlotStart, setPastSlotStart] = useState<string | null>(null);
 
+  const handleSwipeLeft = () => {
+    if (activeMobileDayIdx < days.length - 1) {
+      setMobileDayIdx(activeMobileDayIdx + 1);
+    } else if (weekOffset < 4) {
+      onWeekChange(weekOffset + 1);
+      setMobileDayIdx(0);
+    }
+  };
+
+  const handleSwipeRight = () => {
+    if (activeMobileDayIdx > 0) {
+      setMobileDayIdx(activeMobileDayIdx - 1);
+    } else if (weekOffset > -4) {
+      onWeekChange(weekOffset - 1);
+      setMobileDayIdx(6);
+    }
+  };
+
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    threshold: 50,
+  });
+
   useEffect(() => {
     function updateTime() {
       const now = new Date();
@@ -302,25 +327,59 @@ export function ScheduleGrid({
         </p>
       </div>
 
-      <div className="lg:hidden">
-        <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
-          {days.map((day, i) => (
+      <div className="lg:hidden" {...swipeHandlers}>
+        <div className="mb-4 rounded-xl bg-surface-container-low p-4">
+          <div className="mb-3 flex items-center justify-between">
             <button
-              key={i}
               type="button"
-              onClick={() => setMobileDayIdx(i)}
-              className={clsx(
-                'shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
-                i === activeMobileDayIdx
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
-                isToday(day, displayTz) && i !== activeMobileDayIdx && 'ring-1 ring-inset ring-primary',
-              )}
+              onClick={() => onWeekChange(weekOffset - 1)}
+              aria-label="Previous week"
+              className="rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container active:scale-95"
             >
-              <div>{WEEKDAY_LABELS[day.weekday]}</div>
-              <div className="mt-0.5 opacity-70">{day.day}</div>
+              <Icon name="chevron_left" size={20} />
             </button>
-          ))}
+            <div className="text-center">
+              <div className="text-headline-md font-bold text-on-surface">
+                {days[activeMobileDayIdx]?.date.toLocaleDateString('en-US', {
+                  timeZone: displayTz,
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+              {isToday(days[activeMobileDayIdx], displayTz) && (
+                <div className="mt-0.5 text-label-sm font-bold text-primary">TODAY</div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => onWeekChange(weekOffset + 1)}
+              aria-label="Next week"
+              className="rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container active:scale-95"
+            >
+              <Icon name="chevron_right" size={20} />
+            </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {days.map((day, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setMobileDayIdx(i)}
+                className={clsx(
+                  'shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-all active:scale-95',
+                  i === activeMobileDayIdx
+                    ? 'bg-primary text-on-primary shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high',
+                  isToday(day, displayTz) && i !== activeMobileDayIdx && 'ring-1 ring-inset ring-primary',
+                )}
+              >
+                <div>{WEEKDAY_LABELS[day.weekday]}</div>
+                <div className="mt-0.5 opacity-70">{day.day}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeMobileDayIdx >= 0 && (

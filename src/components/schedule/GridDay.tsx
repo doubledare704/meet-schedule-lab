@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { Icon } from '@/components/ui/Icon';
 import {
   getOfficeWindow,
   getWallClockTime,
   officeRowIndexForLocalMinute,
+  OFFICE_DAY_MINUTES,
 } from '@/utils/timezone';
 
 interface BookingData {
@@ -46,11 +48,20 @@ export function GridDay({
   currentUserId,
   isAllRooms,
   isToday,
+  currentTimePos,
   displayTz,
   onSlotClick,
   onBookingClick,
 }: GridDayProps) {
   const rows = getOfficeWindow(day.date, displayTz);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isToday && currentTimePos !== null && containerRef.current) {
+      const scrollTarget = (currentTimePos / 100) * containerRef.current.scrollHeight - 100;
+      containerRef.current.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    }
+  }, [isToday, currentTimePos]);
 
   return (
     <div>
@@ -62,7 +73,10 @@ export function GridDay({
           <span className="text-label-md font-medium text-error">Now</span>
         )}
       </div>
-      <div className="mt-2 overflow-hidden rounded-xl border border-outline-variant bg-surface">
+      <div
+        ref={containerRef}
+        className="relative mt-2 max-h-[600px] overflow-hidden overflow-y-auto rounded-xl border border-outline-variant bg-surface"
+      >
         {rows.map((row, rowIdx) => {
           const cellBookings = bookings.filter((b) => {
             const bStart = getWallClockTime(new Date(b.startTime), displayTz);
@@ -80,12 +94,12 @@ export function GridDay({
             <div
               key={rowIdx}
               className={clsx(
-                'flex min-h-[48px] items-center border-b border-outline-variant last:border-0',
+                'flex min-h-[64px] items-center border-b border-outline-variant last:border-0',
                 hasBooking ? 'bg-surface-container-low' : 'cursor-pointer hover:bg-primary-container/10',
               )}
               onClick={() => !hasBooking && onSlotClick(day, row.localMinute)}
             >
-              <div className="w-14 shrink-0 text-center text-[11px] text-outline">
+              <div className="w-16 shrink-0 border-r border-outline-variant pr-2 text-right text-xs text-outline">
                 {row.label}
               </div>
               <div className="flex-1 space-y-1 px-2 py-1">
@@ -98,7 +112,7 @@ export function GridDay({
                       onBookingClick(booking);
                     }}
                     className={clsx(
-                      'block w-full rounded-md px-2 py-1.5 text-left text-xs font-medium shadow-sm transition-opacity hover:opacity-90',
+                      'block w-full rounded-md px-2 py-1.5 text-left text-xs font-medium shadow-sm transition-all active:scale-[0.98]',
                       booking.userId === currentUserId
                         ? 'bg-primary text-on-primary'
                         : 'border border-outline bg-surface-container text-on-surface',
@@ -117,12 +131,24 @@ export function GridDay({
                   </button>
                 ))}
                 {!hasBooking && (
-                  <span className="text-[11px] text-on-surface-variant/40">Free</span>
+                  <span className="text-xs text-on-surface-variant/40">Free</span>
                 )}
               </div>
             </div>
           );
         })}
+
+        {isToday && currentTimePos !== null && (
+          <div
+            className="pointer-events-none absolute left-0 right-0 z-10"
+            style={{ top: `${currentTimePos}%` }}
+          >
+            <div className="relative flex items-center">
+              <div className="h-2.5 w-2.5 rounded-full bg-error" />
+              <div className="h-0.5 flex-1 bg-error" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
