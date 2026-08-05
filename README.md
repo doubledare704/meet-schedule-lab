@@ -40,26 +40,26 @@ Office meeting room booking web app with interactive weekly schedule grids, slot
 npm install
 ```
 
-2. Start PostgreSQL:
+1. Start PostgreSQL:
 
 ```bash
 docker compose up -d postgres
 ```
 
-3. Generate Prisma client and run migrations:
+1. Generate Prisma client and run migrations:
 
 ```bash
 npx prisma generate
 npx prisma migrate dev
 ```
 
-4. Seed the database:
+1. Seed the database:
 
 ```bash
 npm run seed
 ```
 
-5. Start the development server:
+1. Start the development server:
 
 ```bash
 npm run dev
@@ -75,13 +75,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 cp .env.example .env
 ```
 
-2. Run the full stack (app + database) with a single command:
+1. Run the full stack (app + database) with a single command:
 
 ```bash
 docker compose up --build -d
 ```
 
-3. Seed the database (one-time) and view test credentials below:
+1. Seed the database (one-time) and view test credentials below:
 
 ```bash
 docker compose exec app npm run seed
@@ -94,7 +94,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Copy `.env.example` to `.env` and adjust values as needed:
 
 | Variable | Description | Default |
-|---|---|---|
+| --- | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/meetscheduledb?schema=public` |
 | `POSTGRES_USER` | PostgreSQL username | `postgres` |
 | `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
@@ -103,11 +103,12 @@ Copy `.env.example` to `.env` and adjust values as needed:
 | `JWT_EXPIRES_IN` | JWT token expiration | `7d` |
 | `MAX_ADVANCE_BOOKING_DAYS` | Maximum days in advance for bookings | `60` |
 | `OFFICE_TIMEZONE` | Timezone for office hours validation | `Europe/Kyiv` |
+| `NOTIFY_BEFORE_MINUTES` | Minutes before a booking starts to send notification | `10` |
 
 ## Available Scripts
 
 | Script | Description |
-|---|---|
+| --- | --- |
 | `npm run dev` | Start development server on `localhost:3000` |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
@@ -125,7 +126,7 @@ After running `npm run seed`:
 
 ## Project Structure
 
-```
+```plaintext
 meet-schedule-lab/
 ├── prisma/                   # Schema, migrations, seed
 ├── src/
@@ -135,9 +136,12 @@ meet-schedule-lab/
 │   │   ├── my-bookings/      # Reservations table
 │   │   └── api/              # REST & SSE endpoints
 │   ├── components/           # React components
-│   │   ├── grid/             # Schedule grid & time indicator
-│   │   ├── modals/           # Booking & cancellation modals
+│   │   ├── auth/             # Auth-related components
+│   │   ├── bookings/         # Booking & cancellation modals
+│   │   ├── layout/           # Layout wrappers & header
+│   │   ├── mobile/           # Mobile-specific components
 │   │   ├── notifications/    # Bell badge & toast drawer
+│   │   ├── schedule/         # Schedule grid & time indicator
 │   │   └── ui/               # Shared UI primitives
 │   ├── lib/                  # Prisma client, auth helpers
 │   ├── services/             # Business logic layer
@@ -150,7 +154,7 @@ meet-schedule-lab/
 
 ## Database Schema
 
-```
+```plaintext
 User ────┐
          ├── Booking
 Room ─────┤
@@ -159,6 +163,7 @@ Room ─────┤
 ```
 
 Key indexes:
+
 - `bookings`: `[roomId, startTime, endTime]`, `[userId]`
 - `rooms`: `[capacity]`
 - `notifications`: `[userId, isRead]`
@@ -166,7 +171,7 @@ Key indexes:
 ## API Endpoints
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | POST | `/api/auth/register` | Register a new user |
 | POST | `/api/auth/login` | Sign in |
 | POST | `/api/auth/logout` | Sign out |
